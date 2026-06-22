@@ -1,0 +1,6 @@
+# Dependencias del SERVIDOR MCP (proceso normal, venv propio).
+# El Remote Script (remote_script/) NO usa este archivo: corre en el
+# interprete embebido de Live y solo puede usar stdlib (ver README y
+# ADR-001 en engram/02_architecture.md).
+
+pytest>=8.0
