@@ -13,11 +13,13 @@ remote_script/AbletonBridge/   # corre DENTRO de Ableton Live (stdlib pura)
   errors.py                    # catalogo de codigos de error
   dispatcher.py                # cola thread-safe -> hilo de UI de Live
   server.py                    # servidor TCP (thread aparte)
+  handlers.py                  # ping/state.get/probe.api (LOM, hilo principal)
+  surface.py                   # ControlSurface + pump; create_instance en __init__
 
 mcp_server/abletonbridge_mcp/  # proceso normal, venv propio
   protocol.py                  # framing newline-JSON (lado cliente)
   client.py                    # cliente TCP: connect, ping, reconexion
-  server.py                    # tools MCP (live_ping, live_get_state)
+  server.py                    # tools MCP (live_ping, live_get_state, live_probe_api)
 
 tests/                         # pytest: protocolo, dispatcher, cliente,
                                 # servidor real (sockets locales), tools
@@ -39,19 +41,24 @@ instalador automatico en este ticket.
 ### Windows
 
 1. Cerrar Ableton Live si esta abierto.
-2. Copiar la carpeta `remote_script/AbletonBridge/` completa a:
+2. Copiar la carpeta `remote_script/AbletonBridge/` completa (debe quedar
+   `AbletonBridge\__init__.py` directamente dentro) a:
    ```
-   %APPDATA%\Ableton\Live <version>\Preferences\User Remote Scripts\
+   %USERPROFILE%\Documents\Ableton\User Library\Remote Scripts\AbletonBridge\
    ```
-   (si la carpeta `User Remote Scripts` no existe, crearla). Alternativa
-   valida segun version: dentro de la instalacion de Live, en
-   `Resources/MIDI Remote Scripts/` (requiere permisos de administrador;
-   se recomienda la carpeta de usuario arriba si Live la soporta en tu
-   version).
-3. Abrir Ableton Live → `Preferences` → `Link/Tempo/MIDI` (o `MIDI`) →
-   en la lista de **Control Surfaces**, seleccionar `AbletonBridge` en
-   uno de los slots disponibles.
-4. Reiniciar Live si la lista no se actualiza.
+   (crear `Remote Scripts` si no existe). Si moviste la User Library
+   (`Preferences` → `Library`), usar esa ubicacion.
+   > Nota: en Live 11 y anteriores tambien se usaba
+   > `%APPDATA%\Ableton\Live <version>\Preferences\User Remote Scripts\`;
+   > no verificado para Live 12.
+3. Abrir Ableton Live → `Preferences` → `Link, Tempo & MIDI` → en
+   **Control Surface** (cualquier slot libre) elegir `AbletonBridge`.
+   Input/Output pueden quedar en `None`.
+4. Reiniciar Live si `AbletonBridge` no aparece en la lista.
+5. Log de Live: `%APPDATA%\Ableton\Live 12.4.16\Preferences\Log.txt`
+   (tambien `Help` → `Show Log Files`). Buscar `AbletonBridge: listening
+   on 127.0.0.1 port <N>`; si hubo error aparece `AbletonBridge: init
+   error`.
 
 ### macOS
 
@@ -84,6 +91,8 @@ no debe asumirse que funciona sin esta verificacion manual:
    (puerto 19845 o el primer libre en 19845-19855).
 3. Correr el servidor MCP (ver abajo) y verificar que `live_ping`
    devuelve `{ pong: true, live_version: "...", api_level: 11|12 }`.
+   Luego `live_probe_api(client)` devuelve que miembros del LOM existen
+   en tu version de Live (insumo para decidir F2+).
 4. Repetir en Live 11 y en Live 12 (criterio de aceptacion T-002 exige
    ambos).
 
