@@ -1,0 +1,94 @@
+{
+  "schema_version": "0.1",
+  "source": {
+    "kind": "file",
+    "uri": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\rumble_loops\\ZEN_PDT_134_rumble_loop_nuar_F.wav",
+    "sha256": "0a42a96aa1c078e97bed091f6f95b89df24251c5baeca2c745e292f5e2d48b42",
+    "source_quality": "lossless",
+    "analyzed_at": "2026-11-22T22:42:16+00:00",
+    "tools": {
+      "nexo_analysis": "0.1.0",
+      "ffmpeg": false,
+      "pyloudnorm": "0.2.0",
+      "songTagger": "71a97430f646c20cfb007f615fc0e3bd49877287"
+    }
+  },
+  "global": {
+    "duration_s": {
+      "value": 7.164,
+      "confidence": "high",
+      "method": "decoder"
+    },
+    "lufs_integrated": {
+      "value": -12.77,
+      "confidence": "high",
+      "method": "numeric_bs1770"
+    },
+    "true_peak_dbtp": {
+      "value": -1.0,
+      "confidence": "medium",
+      "method": "numeric_4x_polyphase"
+    },
+    "sample_peak_dbfs": {
+      "value": -1.0,
+      "confidence": "high",
+      "method": "numeric"
+    },
+    "lra_lu": {
+      "value": 0.52,
+      "confidence": "high",
+      "method": "numeric_ebu3342"
+    },
+    "short_term_lufs_curve": {
+      "hop_s": 1.0,
+      "window_s": 3.0,
+      "values": [
+        -13.02,
+        -12.68,
+        -12.59,
+        -12.72,
+        -13.08
+      ]
+    },
+    "bpm": {
+      "value": 134.01,
+      "confidence": "high",
+      "method": "essentia_RhythmExtractor2013"
+    },
+    "key": {
+      "value": "A minor",
+      "confidence": "low",
+      "method": "essentia edmm (modo no confiable)",
+      "camelot": "8A"
+    },
+    "bars": {
+      "value": 4.0,
+      "confidence": "high",
+      "method": "duration*bpm"
+    }
+  },
+  "sections": [],
+  "elements": {
+    "rumble": {
+      "note": {
+        "hz": 54.02,
+        "note": "A1",
+        "cents": -31.1,
+        "confidence": "low",
+        "method": "fft_frames_median"
+      },
+      "stability": 0.63,
+      "peaks_hz": [
+        54.0,
+        44.4,
+        76.4,
+        66.1
+      ]
+    }
+  },
+  "warnings": [
+    "BPM de songTagger (133.33) esta cuantizado (audit C-1); no usar",
+    "tonalidad: el perfil edmm de essentia devuelve siempre modo menor; la tonica es indicativa, el modo no es confiable (audit C-3)",
+    "sections no implementado en v1 (las de songTagger no son confiables, audit C-2)"
+  ]
+}

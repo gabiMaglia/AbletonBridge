@@ -1,0 +1,241 @@
+{
+  "root": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno",
+  "entries": [
+    {
+      "file": "loops/atmo_loops/ZEN_PDT_134_atmo_loop_nuar_F.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 14.328,
+      "bars": 8.0
+    },
+    {
+      "file": "loops/bass_synth_loops/ZEN_PDT_134_bass_synth_loop_fx_trail_nuar_F.wav",
+      "role": "bass",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": "F",
+      "key_mismatch": false,
+      "key_delta_semitones": 0,
+      "duration_s": 10.746,
+      "bars": 6.0,
+      "measured": {
+        "hz": 86.59,
+        "note": "F2",
+        "cents": -14.3,
+        "confidence": "low",
+        "method": "fft_frames_median",
+        "octave_ambiguous": false,
+        "stability": 0.37,
+        "peaks_hz": [
+          86.6,
+          80.9,
+          99.6,
+          134.1
+        ]
+      }
+    },
+    {
+      "file": "loops/bass_synth_loops/ZEN_PDT_134_bass_synth_loop_nuar_F.wav",
+      "role": "bass",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": "F",
+      "key_mismatch": false,
+      "key_delta_semitones": 0,
+      "duration_s": 7.164,
+      "bars": 4.0,
+      "measured": {
+        "hz": 86.59,
+        "note": "F2",
+        "cents": -14.4,
+        "confidence": "low",
+        "method": "fft_frames_median",
+        "octave_ambiguous": false,
+        "stability": 0.37,
+        "peaks_hz": [
+          86.6,
+          80.7,
+          99.6,
+          134.1
+        ]
+      }
+    },
+    {
+      "file": "loops/drum_loops/drum_grooves/ZEN_PDT_134_drum_loop_groove_nuar_F.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 14.328,
+      "bars": 8.0
+    },
+    {
+      "file": "loops/drum_loops/drum_loops_no_kick/ZEN_PDT_134_drum_loop_no_kick_nuar_F.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 14.328,
+      "bars": 8.0
+    },
+    {
+      "file": "loops/drum_loops/drum_top_loops/ZEN_PDT_134_drum_top_loop_nuar_F.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 14.328,
+      "bars": 8.0
+    },
+    {
+      "file": "loops/music_loops/ZEN_PDT_134_music_loop_nuar_F.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 14.328,
+      "bars": 8.0
+    },
+    {
+      "file": "loops/perc_loops/ZEN_PDT_134_perc_clap_loop_nuar_F.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 14.328,
+      "bars": 8.0
+    },
+    {
+      "file": "loops/rumble_loops/ZEN_PDT_134_rumble_loop_nuar_F.wav",
+      "role": "rumble",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": "A",
+      "key_mismatch": true,
+      "key_delta_semitones": 4,
+      "duration_s": 7.164,
+      "bars": 4.0,
+      "measured": {
+        "hz": 54.02,
+        "note": "A1",
+        "cents": -31.1,
+        "confidence": "low",
+        "method": "fft_frames_median",
+        "octave_ambiguous": false,
+        "stability": 0.63,
+        "peaks_hz": [
+          54.0,
+          44.4,
+          76.4,
+          66.1
+        ]
+      }
+    },
+    {
+      "file": "loops/stab_synth_loops/ZEN_PDT_134_stab_synth_loop_nuar_F.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": 134,
+      "name_key": "F",
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 14.328,
+      "bars": 8.0
+    },
+    {
+      "file": "one_shots/drums/clap/ZEN_PDT_clap_one_shot_nuar.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": null,
+      "name_key": null,
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 0.14,
+      "bars": null
+    },
+    {
+      "file": "one_shots/drums/hi_hat_closed/ZEN_PDT_closed_hi_hat_one_shot_nuar.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": null,
+      "name_key": null,
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 0.168,
+      "bars": null
+    },
+    {
+      "file": "one_shots/drums/hi_hat_open/ZEN_PDT_open_hi_hat_one_shot_nuar.wav",
+      "role": "other",
+      "kit": "nuar",
+      "bpm": null,
+      "name_key": null,
+      "measured_key": null,
+      "key_mismatch": null,
+      "key_delta_semitones": null,
+      "duration_s": 0.392,
+      "bars": null
+    },
+    {
+      "file": "one_shots/drums/kick/ZEN_PDT_kick_one_shot_nuar_G.wav",
+      "role": "kick",
+      "kit": "nuar",
+      "bpm": null,
+      "name_key": "G",
+      "measured_key": "G",
+      "key_mismatch": false,
+      "key_delta_semitones": 0,
+      "duration_s": 0.398,
+      "bars": null,
+      "measured": {
+        "hz": 49.01,
+        "note": "G1",
+        "cents": 0.3,
+        "confidence": "high",
+        "method": "fft_body_hann_parabolic",
+        "octave_ambiguous": false,
+        "glide_st": 2.7,
+        "pyin_hz": 50.45,
+        "pyin_agrees": true
+      }
+    }
+  ],
+  "summary": {
+    "files": 14,
+    "by_role": {
+      "other": 10,
+      "bass": 2,
+      "rumble": 1,
+      "kick": 1
+    },
+    "measured": 4,
+    "mismatches": 1,
+    "errors": 0
+  }
+}

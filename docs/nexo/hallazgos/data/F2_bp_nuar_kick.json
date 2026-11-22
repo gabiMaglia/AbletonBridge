@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1",
+  "source": {
+    "kind": "file",
+    "uri": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\drums\\kick\\ZEN_PDT_kick_one_shot_nuar_G.wav",
+    "sha256": "b079c1f8ea5c440dc7f9b988c989d76374a0050b7a732a40a92cac0a985dd0c9",
+    "source_quality": "lossless",
+    "analyzed_at": "2026-11-22T22:42:52+00:00",
+    "tools": {
+      "nexo_analysis": "0.1.0",
+      "ffmpeg": false,
+      "pyloudnorm": "0.2.0"
+    }
+  },
+  "global": {
+    "duration_s": {
+      "value": 0.398,
+      "confidence": "high",
+      "method": "decoder"
+    }
+  },
+  "sections": [],
+  "elements": {
+    "kick": {
+      "note": {
+        "hz": 49.01,
+        "note": "G1",
+        "cents": 0.3,
+        "confidence": "high",
+        "method": "fft_body_hann_parabolic"
+      },
+      "glide_st": {
+        "value": 2.7,
+        "confidence": "low",
+        "method": "hilbert_inst_freq_3_10ms"
+      }
+    }
+  },
+  "warnings": [
+    "loudness no medido: audio demasiado corto para medir loudness (< 0.4 s)",
+    "sin songTagger: no hay bpm, tonalidad ni downbeats",
+    "sections no implementado en v1 (las de songTagger no son confiables, audit C-2)"
+  ]
+}

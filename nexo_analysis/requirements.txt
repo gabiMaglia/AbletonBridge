@@ -1,0 +1,9 @@
+# Motor de analisis NEXO (T-014). Parte pura Python; corre en Windows nativo.
+# songTagger (essentia/madmom) vive en WSL y NO se instala aca (ver adapter_songtagger.py).
+numpy>=2.0
+scipy>=1.13
+soundfile>=0.12
+pyloudnorm==0.2.0
+# Opcional: segunda opinion pYIN para el pitch. Sin librosa se omite en silencio.
+# librosa<1.0
+pytest>=8   # solo para tests
