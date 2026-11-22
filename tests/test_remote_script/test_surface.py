@@ -129,3 +129,7 @@ def test_spike_handlers_registered(instance) -> None:
                 "spike.automation_arm", "spike.audio_clip", "spike.devices",
                 "spike.simpler_slice"):
         assert cmd in instance.server._handlers
+
+
+def test_state_detail_handler_registered(instance) -> None:
+    assert "state.detail" in instance.server._handlers

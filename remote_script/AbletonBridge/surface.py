@@ -7,7 +7,7 @@ drena desde `_tick`.
 """
 from typing import Any, Callable, Dict, List, Optional
 
-from . import handlers, spikes, spikes_media
+from . import handlers, spikes, spikes_media, state_detail
 from .dispatcher import UIDispatcher
 from .server import BridgeServer, DEFAULT_PORT, FALLBACK_PORT_RANGE
 
@@ -71,6 +71,7 @@ class AbletonBridge(_Base):
     def _build_handlers(self) -> Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]]:
         return {
             "state.get": lambda params: handlers.get_state(self.song(), self._live_info, params),
+            "state.detail": lambda params: state_detail.get_state_detail(self.song(), params),
             "probe.api": lambda params: handlers.probe_api(self._live, self._live_info),
             "spike.automation_session": lambda p: spikes.automation_session(self.song(), self._live, p),
             "spike.automation_record_start": lambda p: self.spikes.start(self.song(), self._live, p),

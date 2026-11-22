@@ -13,7 +13,10 @@ conecta en un ticket posterior si el ticket lo requiere explicitamente;
 T-002 solo exige UNA tool de prueba end-to-end funcionando contra el
 bridge, que es lo que cubren estas funciones + sus tests.
 """
-from typing import Any, Dict
+import json
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .client import BridgeClient
 
@@ -29,6 +32,64 @@ def live_get_state(client: BridgeClient, include_clips: bool = True) -> Dict[str
     Params: { include_clips: bool } -- ver engram/04_api_contracts.md SS B F-005.
     """
     return client.send_request("state.get", {"include_clips": include_clips})
+
+
+# Tope de caracteres antes de volcar a archivo (los resultados MCP se cortan ~25k tokens).
+STATE_DETAIL_MAX_CHARS = 60_000
+STATE_DETAIL_CACHE = Path(__file__).resolve().parents[2] / ".cache" / "state_detail"
+
+
+def _state_detail_summary(result: Dict[str, Any]) -> Dict[str, Any]:
+    def names(devices: Any) -> Any:
+        if not isinstance(devices, list):
+            return devices
+        return [d.get("name") if isinstance(d, dict) else d for d in devices]
+
+    def row(t: Any) -> Any:
+        if not isinstance(t, dict):
+            return t
+        return {"index": t.get("index"), "name": t.get("name"),
+                "kind": t.get("kind"), "devices": names(t.get("devices"))}
+
+    tracks = result.get("tracks")
+    returns = result.get("returns")
+    master = result.get("master")
+    return {
+        "tracks": [row(t) for t in tracks] if isinstance(tracks, list) else tracks,
+        "returns": [row(t) for t in returns] if isinstance(returns, list) else returns,
+        "master_devices": names(master.get("devices")) if isinstance(master, dict) else master,
+    }
+
+
+def live_get_state_detail(
+    client: BridgeClient,
+    tracks: Optional[List[int]] = None,
+    params: str = "changed",
+    include_arrangement: bool = True,
+    include_session: bool = True,
+    cache_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    Lectura completa y de SOLO LECTURA del set (T-008). Ver contrato `state.detail`.
+    Si el JSON supera STATE_DETAIL_MAX_CHARS se vuelca a `.cache/state_detail/` y se
+    devuelve {truncated, file, summary}.
+    """
+    request: Dict[str, Any] = {
+        "params": params,
+        "include_arrangement": include_arrangement,
+        "include_session": include_session,
+    }
+    if tracks is not None:
+        request["tracks"] = tracks
+    result = client.send_request("state.detail", request)
+    text = json.dumps(result, ensure_ascii=False)
+    if len(text) <= STATE_DETAIL_MAX_CHARS:
+        return result
+    target = Path(cache_dir) if cache_dir is not None else STATE_DETAIL_CACHE
+    target.mkdir(parents=True, exist_ok=True)
+    path = target / f"state_detail_{time.strftime('%Y%m%d_%H%M%S')}_{time.time_ns() % 1_000_000:06d}.json"
+    path.write_text(text, encoding="utf-8")
+    return {"truncated": True, "file": str(path.resolve()), "summary": _state_detail_summary(result)}
 
 
 def live_probe_api(client: BridgeClient) -> Dict[str, Any]:

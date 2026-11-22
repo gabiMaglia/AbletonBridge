@@ -9,6 +9,8 @@ Se borra junto con spike.cleanup cuando el spike termine.
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from . import lom_read
+
 PREFIX = "SPIKE-"
 SESSION_TRACK = PREFIX + "AUTO-SESSION"
 RECORD_TRACK = PREFIX + "AUTO-RECORD"
@@ -359,11 +361,7 @@ def automation_arm(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _safe(fn: Callable[[], Any]) -> Any:
-    try:
-        return fn()
-    except Exception as exc:  # noqa: BLE001
-        return f"unavailable: {type(exc).__name__}"
+_safe = lom_read.safe
 
 
 def cleanup(song: Any, recorder: RecordSpike) -> Dict[str, Any]:

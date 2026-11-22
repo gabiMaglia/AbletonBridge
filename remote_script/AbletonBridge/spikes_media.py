@@ -9,6 +9,7 @@ cualquier pista con prefijo SPIKE-).
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
+from . import lom_read
 from .spikes import PREFIX, _float, _new_midi_track, _safe, _step
 
 AUDIO_TRACK = PREFIX + "AUDIO"
@@ -45,9 +46,7 @@ def _new_audio_track(song: Any, name: str) -> Tuple[int, Any]:
     return index, track
 
 
-def _get(obj: Any, attr: str) -> Any:
-    """Lee un atributo; si falla devuelve 'unavailable: ...' para reportarlo."""
-    return _safe(lambda: getattr(obj, attr))
+_get = lom_read.get
 
 
 def _warp_markers(clip: Any) -> Any:

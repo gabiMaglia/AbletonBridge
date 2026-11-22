@@ -52,3 +52,6 @@
 
 ### 2026-11-22 nerv-orquestador->nerv-desktop T-002d (spikes ronda 2)
 - Agregados spikes_media.py (audio_clip, devices, simpler_slice), automation_arm + arm en record_start (restaura al terminar), 4 tools MCP + contrato. Tests 102 verdes. En revision QA. Sin probar en Live real (ver lista VERIFICAR EN LIVE en contratos).
+
+### 2026-11-22 nerv-orquestador->nerv-desktop T-008 (state.detail)
+- Agregados state_detail.py (lectura completa read-only, wrappers safe), lom_read.py (helpers compartidos, spikes ahora los reusan), cmd `state.detail`, tool MCP live_get_state_detail con volcado a .cache/state_detail/ (>60k chars) + contrato permanente. Tests 123 verdes. En revision QA. Sin probar en Live real (ver VERIFICAR EN LIVE en contrato).

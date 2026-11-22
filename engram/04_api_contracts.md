@@ -158,6 +158,36 @@ Un mensaje = una línea = un objeto JSON. Sin saltos de línea internos (JSON co
 - Errores: `BRIDGE_TIMEOUT`, `BRIDGE_DISCONNECTED`, `LOM_ERROR`
 - → `cmd: "state.get"` · LOM: itera `song.tracks[*]` y `clip_slots[*]`.
 
+### Lectura completa · `state.detail` (T-008)
+
+**`live_get_state_detail`** — lectura estructural completa del set, ESTRICTAMENTE de solo lectura (nunca asigna nada del LOM). Permite a Claude "escuchar" leyendo: tracks, grupos, mixer, devices+parametros, clips (Session y Arrangement), returns, master, locators.
+- Params: `{ "tracks": [int] (opcional, default todos; indices fuera de rango se ignoran, salen ordenados),
+  "params": "changed" (default) | "all" | "none", "include_arrangement": bool (true), "include_session": bool (true) }`
+  - `changed`: solo parametros con `value != default_value` (los ilegibles se incluyen); "Device On" solo si el device esta apagado. `none`: sin clave `parameters`.
+  - `params` invalido o `tracks` no-lista de enteros => `LOM_ERROR` (ValueError).
+- Valores de parametros: RAW (0..1 en la mayoria) + `display` = `str_for_value(value)`; las unidades solo salen de `display`. Los nombres son los de la API, no los de la UI (ej. Utility gain = "Output"; `class_name` Compressor2, StereoGain, Eq8).
+- Retorno:
+  ```json
+  { "song": { "tempo", "signature_numerator", "signature_denominator", "song_length",
+              "current_song_time", "is_playing", "loop": {"on","start","length"},
+              "cue_points": [{"name","time"}], "root_note", "scale_name" },
+    "tracks": [ { "index", "name", "kind": "audio|midi|group", "is_foldable", "is_grouped",
+                  "group_name"?, "color_index", "mute", "solo", "arm", "output_routing",
+                  "mixer": { "volume": {"value","display"}, "panning": {...}, "sends": [{...}] },
+                  "devices": [ DEVICE ],
+                  "session_clips": [ {"slot", "name", "length", "is_audio", ...CLIP} ],
+                  "arrangement_clips": [ {"start_time","end_time","name","length","is_audio", ...CLIP} ] } ],
+    "returns": [ { "index", "name", "kind": "return", "mute", "solo", "mixer", "devices" } ],
+    "master":  { "name", "mixer": {"volume","panning"}, "devices" } }
+  ```
+  - `CLIP` audio: `file_path, warping, warp_mode, pitch_coarse, pitch_fine, gain, gain_display (gain_display_string), looping, loop_start, loop_end, start_marker, end_marker`. MIDI: `note_count` (len de `get_all_notes_extended`), `looping, loop_start, loop_end, start_marker, end_marker`.
+  - `DEVICE`: `{ class_name, name, type?, is_active, parameters?: [{name, value, display, min, max, is_quantized}], chains?: [{name, mute, solo, in_note? (Drum Rack), devices: [DEVICE]}], chains_truncated? }`. Chains recursivas hasta profundidad 3 (mas alla: `chains_truncated: true`).
+- Todo campo ilegible = `"unavailable: <ExcType>"` (ej. `arm` en un grupo); nunca aborta la lectura completa.
+- Guard de tamano (en la tool MCP): si el JSON supera 60.000 caracteres se escribe a `<repo>/.cache/state_detail/state_detail_<timestamp>.json` y se devuelve `{ "truncated": true, "file": <ruta absoluta>, "summary": { "tracks": [{index,name,kind,devices:[nombres]}], "returns": [...], "master_devices": [...] } }`.
+- Errores: `BRIDGE_TIMEOUT`, `BRIDGE_DISCONNECTED`, `LOM_ERROR`
+- → `cmd: "state.detail"` (hilo principal via dispatcher).
+- VERIFICAR EN LIVE: `Song.root_note/scale_name` (Live 11+), `Clip.gain_display_string`, `Clip.get_all_notes_extended` (len), `DrumChain.in_note`, `Track.output_routing_type.display_name`, `Track.color_index`, `Device.type`, `return_tracks[*].mixer_device.sends` (puede estar vacio), `master_track.mixer_device` sin sends, `Track.group_track.name`.
+
 ### Diagnóstico · `probe_api` (T-002b)
 
 **`live_probe_api`** — informa qué miembros del LOM existen en la versión de Live conectada.
