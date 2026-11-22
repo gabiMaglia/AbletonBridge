@@ -100,8 +100,9 @@ def drive(rec, song, t):
 
 
 def to_recording(rec, song):
-    rec.tick(song)  # queued -> seeking
-    rec.tick(song)  # seeking -> preroll (start_playing)
+    rec.tick(song)  # queued -> seeking (start_playing: Live salta al marcador de inicio)
+    rec.tick(song)  # seeking: pide el salto al preroll con el transporte andando
+    rec.tick(song)  # seeking -> preroll (el salto se aplicó)
     drive(rec, song, 8.0)  # punch-in
     assert rec.phase == "recording"
 
@@ -177,16 +178,19 @@ def test_first_tick_saves_state_arms_automation_and_seeks_to_preroll() -> None:
     rec.record(song, params())
     rec.tick(song)
     assert song.session_automation_record is True and song.record_mode is False
-    assert song.current_song_time == 4.0 and rec.phase == "seeking"
+    assert rec.phase == "seeking"
     assert [t.arm for t in song.tracks] == [False, False, False]
     assert [d["name"] for d in rec.status(song)["disarmed_tracks"]] == ["Kick", "Lead"]
     assert song.tracks[0].mixer_device.volume.value == 0.0  # valor en start_beat antes de reproducir
-    assert song.calls == []  # aun no arranco el transporte
+    assert song.calls == ["start"]  # arranca en cualquier lado; despues salta al preroll
+    rec.tick(song)
+    assert song.current_song_time == 4.0
 
 
 def test_preroll_is_clamped_at_zero() -> None:
     song, rec = Song(), automation.AutomationRecorder()
     rec.record(song, params(start_beat=2.0, end_beat=6.0, lanes=[lane(points=((2.0, 0.0), (6.0, 1.0)))]))
+    rec.tick(song)
     rec.tick(song)
     assert song.current_song_time == 0.0
 
@@ -194,13 +198,12 @@ def test_preroll_is_clamped_at_zero() -> None:
 def test_transport_starts_only_after_the_playhead_arrives() -> None:
     song, rec = Song(), automation.AutomationRecorder()
     rec.record(song, params())
-    rec.tick(song)
-    song.current_song_time = 12.0  # Live todavia no aplico el seek
-    rec.tick(song)
-    assert rec.phase == "seeking" and song.calls == []
-    song.current_song_time = 4.0
-    rec.tick(song)
-    assert rec.phase == "preroll" and song.calls == ["continue"]
+    rec.tick(song)  # queued: arranca el transporte (Live salta al marcador de inicio, 40)
+    assert song.calls == ["start"] and rec.phase == "seeking"
+    rec.tick(song)  # seeking: fuera de la ventana -> pide el salto al preroll con el transporte andando
+    assert rec.phase == "seeking"
+    rec.tick(song)  # el salto ya se aplicó
+    assert rec.phase == "preroll"
 
 
 def test_punch_in_exactly_when_song_time_reaches_start_beat() -> None:
@@ -219,6 +222,7 @@ def test_punch_in_exactly_when_song_time_reaches_start_beat() -> None:
 def test_preroll_waits_while_transport_is_not_playing() -> None:
     song, rec = Song(), automation.AutomationRecorder()
     rec.record(song, params())
+    rec.tick(song)
     rec.tick(song)
     rec.tick(song)
     song.is_playing = False
@@ -364,6 +368,7 @@ def test_timeout_scales_with_the_length_of_the_recording() -> None:
     rec.record(song, params(start_beat=0.0, end_beat=768.0, lanes=[lane(points=((0.0, 0.0), (768.0, 1.0)))]))
     rec.tick(song)
     rec.tick(song)
+    rec.tick(song)
     clock.t = 7 * 60.0
     drive(rec, song, 0.0)
     assert rec.phase in ("preroll", "recording")
@@ -491,5 +496,5 @@ def test_transport_starts_from_seek_position_not_insert_marker():
                       "lanes": [{"track": 0, "target": "volume", "points": [[100.0, 0.2], [108.0, 0.8]]}]})
     for _ in range(3):
         rec.tick(song)
-    assert "continue" in song.calls and "start" not in song.calls
-    assert song.current_song_time == 96.0
+    assert rec.phase == "preroll" and song.current_song_time == 96.0
+    assert song.record_mode is False  # no grabó nada mientras estaba en el marcador de inicio

@@ -23,6 +23,8 @@ MAX_POINTS = 4096
 MAX_PREROLL = 64.0
 EPS_FRAC = 1e-4  # no reescribir si el valor cambio menos del 0.01% del rango
 SEEK_TOL = 0.01  # beats: tolerancia para dar por aplicado un current_song_time
+SEEK_WINDOW = 0.5  # beats antes del preroll que se aceptan como "ya llegó"
+SEEK_RETRY_TICKS = 3  # ticks entre pedidos de salto mientras no llega
 PUNCH_TOL = 1e-6
 ACTIVE = ("queued", "seeking", "preroll", "recording")
 FINAL = ("done", "error", "cancelled")
@@ -234,20 +236,32 @@ class AutomationRecorder:
         song.session_automation_record = True
         song.record_mode = False
         self._seek_to = max(0.0, self._start - self._preroll_beats)
-        song.current_song_time = self._seek_to
         for lane in self._lanes:
             lane.write(interp(lane.points, self._start), force=True)
+        # Con el transporte parado, ni start_playing() (marcador de inicio) ni continue_playing()
+        # respetan un current_song_time puesto por script (visto en Live 12.4.16). Se arranca
+        # en cualquier lado y se salta al preroll con el transporte andando (salto inmediato).
+        song.start_playing()
+        self._seek_wait = 0
         self.phase = "seeking"
 
     def _seeking(self, song: Any) -> None:
-        # Live aplica current_song_time en un tick posterior: no arrancar hasta que llegue.
-        if abs(float(song.current_song_time) - self._seek_to) > SEEK_TOL:
+        if not getattr(song, "is_playing", False):
             return
-        # start_playing() arranca desde el marcador de inicio del Arrangement (visto en Live
-        # 12.4.16: pedido 712, arrancó en 160); continue_playing() respeta current_song_time.
-        play = getattr(song, "continue_playing", None) or song.start_playing
-        play()
-        self.phase = "preroll"
+        t = float(song.current_song_time)
+        self._current = t
+        # Ventana de llegada: del preroll al start; si no hay preroll (start en 0) se acepta
+        # medio tiempo después del start y el punch-in ocurre en el tick siguiente.
+        hi = self._start - PUNCH_TOL if self._start > self._seek_to else self._seek_to + SEEK_WINDOW
+        if self._seek_to - SEEK_WINDOW <= t < hi:
+            self.phase = "preroll"
+            return
+        # Todavía no está en la ventana de preroll: (re)pedir el salto cada pocos ticks.
+        if self._seek_wait <= 0:
+            song.current_song_time = self._seek_to
+            self._seek_wait = SEEK_RETRY_TICKS
+        else:
+            self._seek_wait -= 1
 
     def _preroll(self, song: Any) -> None:
         t = float(song.current_song_time)
