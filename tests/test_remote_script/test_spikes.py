@@ -193,6 +193,63 @@ def test_record_tick_ramps_then_finishes(live) -> None:
     assert st["arrangement_clips"] == [] and "volume" in st["automation_state"]
 
 
+def test_record_start_stops_running_transport_first(live) -> None:
+    song = Song()
+    calls = []
+    song.stop_playing = lambda: calls.append("stop")
+    song.start_playing = lambda: calls.append("start")
+    song.is_playing = True
+    spikes.RecordSpike().start(song, live, {"bars": 1})
+    assert calls[:2] == ["stop", "start"]
+
+
+def test_record_tick_waits_while_transport_not_playing(live) -> None:
+    song = Song()
+    r = spikes.RecordSpike()
+    r.start(song, live, {"start_beat": 32.0, "bars": 1})
+    song.is_playing = False
+    song.current_song_time = 100.0  # posicion vieja: no debe contar como fin
+    r.tick()
+    assert r.status(song)["phase"] == "running" and r.steps_applied == 0
+
+
+def test_record_ignores_position_before_start(live) -> None:
+    song = Song()
+    r = spikes.RecordSpike()
+    r.start(song, live, {"start_beat": 32.0, "bars": 1})
+    song.current_song_time = 10.0
+    r.tick()
+    assert r.steps_applied == 0 and r.status(song)["phase"] == "running"
+
+
+def test_record_status_exposes_trace(live) -> None:
+    song = Song()
+    r = spikes.RecordSpike()
+    r.start(song, live, {"start_beat": 32.0, "bars": 1})
+    song.current_song_time = 34.0
+    r.tick()
+    trace = r.status(song)["trace"]
+    assert trace[-1]["song_time"] == 34.0 and trace[-1]["progress"] == pytest.approx(0.5)
+
+
+def test_record_picks_continuous_operator_param(live) -> None:
+    song = Song()
+    r = spikes.RecordSpike()
+    out_holder = {}
+    original = Track.insert_device
+
+    def insert(self, name, idx):
+        original(self, name, idx)
+        self.devices[idx].parameters[1].is_quantized = True  # "Transpose" cuantizado
+
+    Track.insert_device = insert
+    try:
+        out_holder = r.start(song, live, {"bars": 1})
+    finally:
+        Track.insert_device = original
+    assert out_holder["operator_param"] == "Osc A Level"
+
+
 def test_record_tick_error_goes_to_error_phase_without_raising(live) -> None:
     song = Song()
     r = spikes.RecordSpike()

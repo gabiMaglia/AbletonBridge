@@ -64,7 +64,9 @@ def _device(track: Any, name: str) -> Any:
 
 def _first_non_device_on(device: Any) -> Any:
     for param in device.parameters:
-        if param.name != "Device On":
+        # Saltea parametros cuantizados (ej. Operator "Algorithm"): la rampa
+        # necesita un valor continuo.
+        if param.name != "Device On" and not getattr(param, "is_quantized", False):
             return param
     return None
 
@@ -204,6 +206,7 @@ class RecordSpike:
         self._start_beat = 0.0
         self._length = 0.0
         self._deadline = 0.0
+        self.trace: List[Dict[str, Any]] = []
 
     def reset(self) -> None:
         self._reset()
@@ -234,6 +237,10 @@ class RecordSpike:
         out["operator_param"] = self._op_param_name
 
         def transport() -> None:
+            # Si el transporte ya corria, current_song_time arrastra una
+            # posicion vieja y el primer tick daba la rampa por terminada.
+            if getattr(song, "is_playing", False):
+                song.stop_playing()
             song.current_song_time = start_beat
             song.record_mode = True  # VERIFICAR EN LIVE: arma grabacion de automatizacion en Arrangement
             song.start_playing()
@@ -271,11 +278,17 @@ class RecordSpike:
             return
         song = self._song
         try:
-            progress = (float(song.current_song_time) - self._start_beat) / self._length
+            song_time = float(song.current_song_time)
+            progress = (song_time - self._start_beat) / self._length
             timed_out = self._clock() > self._deadline
             if timed_out and progress < 1.0:
                 raise TimeoutError("transport did not reach the end of the ramp")
-            progress = max(0.0, min(1.0, progress))
+            # Solo cuenta con el transporte andando y el cursor ya en la rampa.
+            if not getattr(song, "is_playing", False) or progress < 0.0:
+                return
+            progress = min(1.0, progress)
+            if len(self.trace) < 200:
+                self.trace.append({"song_time": song_time, "progress": progress})
             vol = self._track.mixer_device.volume
             vol.value = vol.min + (vol.default_value - vol.min) * progress
             op = self._op_param()
@@ -295,6 +308,7 @@ class RecordSpike:
             "phase": self.phase,
             "steps_applied": self.steps_applied,
             "errors": list(self.errors),
+            "trace": list(self.trace),
         }
         if self._track is not None and self.phase in ("done", "error", "running"):
             states: Dict[str, Any] = {}
