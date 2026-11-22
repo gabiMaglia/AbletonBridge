@@ -130,3 +130,42 @@ def test_registered_handler_runs_via_dispatcher_pump() -> None:
     finally:
         client.close()
         server.stop()
+
+
+def test_command_error_from_handler_keeps_its_code() -> None:
+    import threading
+
+    from mcp_server.abletonbridge_mcp.client import BridgeCommandError
+    from remote_script.AbletonBridge import errors
+
+    dispatcher = UIDispatcher()
+
+    def handler(params):
+        raise errors.CommandError(errors.TRACK_NOT_FOUND, "no track 9")
+
+    server = BridgeServer(
+        dispatcher=dispatcher, live_info_provider=fake_live_info,
+        preferred_port=0, port_range=range(0, 1), handlers={"x.fail": handler},
+    )
+    port = server.bind()
+    server.start()
+    client = BridgeClient(host="127.0.0.1", port=port, timeout=2.0)
+    caught = {}
+
+    def call():
+        try:
+            client.send_request("x.fail", {})
+        except BridgeCommandError as exc:
+            caught["code"], caught["msg"] = exc.code, exc.message
+
+    try:
+        client.connect()
+        t = threading.Thread(target=call)
+        t.start()
+        while t.is_alive():
+            dispatcher.pump()
+            t.join(0.02)
+        assert caught == {"code": "TRACK_NOT_FOUND", "msg": "no track 9"}
+    finally:
+        client.close()
+        server.stop()

@@ -299,3 +299,32 @@ VERIFICAR EN LIVE: valores de `warp_mode` (6 = Complex Pro) y `playback_mode` (0
 `create_audio_clip` devuelva el Clip; orden/validez al setear loop/markers y `looping` en clip de Arrangement; `insert_device`
 devuelve Device; `original_name`/`value_items`/`str_for_value`; `Sample.sample_rate`, `slicing_*`, `slices`; `clear_slices`
 + `insert_slice` en frame 0; notas 36..39 disparan slices y 60 es la raíz del one-shot; `insert_device("Drum Rack")`.
+
+---
+
+## Producción v1 (T-003) — comandos permanentes
+
+Todos corren en el hilo principal (dispatcher), con params tipados (sin exec/eval). Errores de validación con código propio (`errors.CommandError`): `INVALID_PARAMS`, `TRACK_NOT_FOUND`, `NOT_MIDI_TRACK`; fallas de la API de Live => `LOM_ERROR`. Los comandos multi-paso devuelven `steps: {nombre: {ok, error}}` y `warnings` en vez de abortar. `track` = índice 0-based (se invalida al crear/borrar tracks). `device` = índice en `track.devices` o nombre exacto. Valores de parámetros RAW; la unidad solo sale de `display` (`str_for_value`).
+
+| cmd (tool MCP) | Params | Respuesta |
+|---|---|---|
+| `song.set` (`live_song_set`) | `tempo?` (20..999), `signature_numerator?` (1..99), `signature_denominator?` (1,2,4,8,16), `loop_start?` (>=0), `loop_length?` (>0), `loop_on?` (bool) | readback `{tempo, signature_numerator, signature_denominator, loop_start, loop_length, loop_on}` |
+| `track.create` (`live_track_create`) | `kind` "audio"\|"midi", `name`, `index=-1` (append; 0..len) | `{index, name}` |
+| `track.set_mixer` (`live_track_set_mixer`) | `track`, `volume_db?` (número o "-inf"), `pan?` (-1..1), `mute?`, `solo?` | `{track, volume?:{value, display, within_tolerance}, panning?:{value, display}, mute?, solo?}` solo las claves pedidas |
+| `track.delete` (`live_track_delete`) | `track`, `confirm_name` (== nombre actual, exacto) | `{deleted, index, track_count}` |
+| `clip.place_audio` (`live_clip_place_audio`) | `track` (audio), `path` (absoluto, existente, .wav/.aif/.aiff/.mp3/.flac), `start_beat` (>=0), `length_beats` (>0), `warp_mode?` (0,1,2,3,4,6), `pitch_coarse?` (-48..48), `gain_db?`, `loop_start?`+`loop_end?` (juntos; sección del archivo a usar, como el "chop" del spike) | `{ok, track, clips:[{start_time,end_time,length,warp_mode,pitch_coarse}], covered_beats, gain?:{applied,value,display,within_tolerance,error?}, warnings:[str], steps}` |
+| `clip.create_midi` (`live_clip_create_midi`) | `track` (MIDI), `start_beat`, `length_beats`, `notes:[{pitch 0..127, start>=0, duration>0, velocity 1..127}]` (puede ser `[]`) | `{track, start_time, end_time, length, name, note_count}` |
+| `device.insert` (`live_device_insert`) | `track`, `name` (nativo, p.ej. "Saturator"), `index=-1` | `{index, class_name, name}` |
+| `device.set_param` (`live_device_set_param`) | `track`, `device`, `name` (exacto, sensible a mayúsculas, nombre de API), `value` (raw dentro de [min,max]) | `{device, name, min, max, value, display}` |
+| `simpler.load` (`live_simpler_load`) | `track`, `device` (un Simpler), `path`, `playback_mode?` (0 Classic, 1 One-Shot, 2 Slicing) | `{ok, device, file_path, playback_mode, steps}` |
+| `locator.set` (`live_locator_set`) | `time` (>=0), `name` | `{cue_points:[{name,time}]}` ordenado por tiempo |
+| `locator.clear_all` (`live_locator_clear_all`) | — | `{removed, cue_points}` |
+
+Semántica:
+- `track.set_mixer.volume_db`: bisección sobre `[min,max]` de `mixer_device.volume` contra `str_for_value` (monótono), tolerancia 0.1 dB. Si el objetivo no es alcanzable (p.ej. +30 dB) deja el valor más cercano y `within_tolerance: false`. `"-inf"` => `min`.
+- `clip.place_audio`: crea con `Track.create_audio_clip(path, pos)`; aplica warp/pitch/gain/sección por copia; si `clip.length` < lo que falta, crea otra copia pegada al final de la anterior (tiling); si `length` > lo que falta, recorta seteando `end_marker` y `loop_end`; verifica la longitud tras recortar y, si no quedó, agrega warning `trim ... not applied` y `ok:false`. Tope 512 copias. `gain_db` busca el crudo por bisección sobre `Clip.gain` leyendo `gain_display_string` tras cada asignación (solo en la 1.ª copia; las demás reusan el crudo); si no se puede, `gain.applied:false` + warning y el resto sigue.
+- `locator.set`: mueve `current_song_time`, llama `set_or_delete_cue` solo si NO hay cue en ese tiempo (alterna), renombra, y restaura el playhead previo.
+- `locator.clear_all`: por cada cue, se posiciona y llama `set_or_delete_cue` (borra); restaura el playhead.
+- `track.delete` exige `confirm_name` igual al nombre actual (guarda contra índices viejos).
+
+VERIFICAR EN LIVE: (1) `Track.create_midi_clip(start_time, length)` orden de args y que devuelva el Clip; (2) tiling: `clip.length` tras `create_audio_clip` en beats y copias contiguas sin solaparse; (3) trim: que setear `end_marker`/`loop_end` acorte el clip de Arrangement (si no, buscar otra vía); (4) `gain_db`: `Clip.gain` 0..1 + `gain_display_string` actualizado tras asignar; (5) `set_or_delete_cue` crea el cue en `current_song_time` de forma síncrona y `cue_points[*].name` es escribible; (6) `song.loop` (on/off), `loop_start`, `loop_length` escribibles; (7) `insert_device(name, index)` con `index` = len(devices); (8) `Song.delete_track(index)`; (9) `volume.str_for_value` devuelve "x dB" parseable (y "-inf dB" en el mínimo); (10) `Device.name` coincide con el nombre pedido en `device`-por-nombre; (11) `loop_start/loop_end` + markers en `place_audio` dan `length = loop_end-loop_start`.

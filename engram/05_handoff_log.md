@@ -55,3 +55,6 @@
 
 ### 2026-11-22 nerv-orquestador->nerv-desktop T-008 (state.detail)
 - Agregados state_detail.py (lectura completa read-only, wrappers safe), lom_read.py (helpers compartidos, spikes ahora los reusan), cmd `state.detail`, tool MCP live_get_state_detail con volcado a .cache/state_detail/ (>60k chars) + contrato permanente. Tests 123 verdes. En revision QA. Sin probar en Live real (ver VERIFICAR EN LIVE en contrato).
+
+### 2026-11-22 nerv-orquestador->nerv-desktop T-003 (comandos de produccion v1)
+- Agregados production.py (11 comandos: song.set, track.create/set_mixer/delete, clip.place_audio/create_midi, device.insert/set_param, simpler.load, locator.set/clear_all), errors.CommandError (el servidor responde su `code` en vez de LOM_ERROR), 11 tools MCP `live_*` + seccion "Produccion v1" del contrato. Tests 181 verdes. En revision QA. Sin probar en Live real (ver VERIFICAR EN LIVE en el contrato). Nota: no existia engram/plans/T-003.md (plan gate no estampado) y el T-003 del backlog es otro ticket (Transporte).

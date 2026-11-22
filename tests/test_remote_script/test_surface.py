@@ -133,3 +133,10 @@ def test_spike_handlers_registered(instance) -> None:
 
 def test_state_detail_handler_registered(instance) -> None:
     assert "state.detail" in instance.server._handlers
+
+
+def test_production_handlers_registered(instance) -> None:
+    for cmd in ("song.set", "track.create", "track.set_mixer", "clip.place_audio",
+                "clip.create_midi", "device.insert", "device.set_param", "simpler.load",
+                "locator.set", "locator.clear_all", "track.delete"):
+        assert cmd in instance.server._handlers

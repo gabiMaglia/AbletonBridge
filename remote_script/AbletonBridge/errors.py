@@ -35,3 +35,12 @@ ALL_CODES = frozenset(
         LOM_ERROR,
     }
 )
+
+
+class CommandError(Exception):
+    """Error de dominio de un handler: el servidor lo responde con este `code` (no LOM_ERROR)."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message

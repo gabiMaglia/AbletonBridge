@@ -7,7 +7,7 @@ drena desde `_tick`.
 """
 from typing import Any, Callable, Dict, List, Optional
 
-from . import handlers, spikes, spikes_media, state_detail
+from . import handlers, production, spikes, spikes_media, state_detail
 from .dispatcher import UIDispatcher
 from .server import BridgeServer, DEFAULT_PORT, FALLBACK_PORT_RANGE
 
@@ -72,6 +72,17 @@ class AbletonBridge(_Base):
         return {
             "state.get": lambda params: handlers.get_state(self.song(), self._live_info, params),
             "state.detail": lambda params: state_detail.get_state_detail(self.song(), params),
+            "song.set": lambda p: production.song_set(self.song(), p),
+            "track.create": lambda p: production.track_create(self.song(), p),
+            "track.set_mixer": lambda p: production.track_set_mixer(self.song(), p),
+            "track.delete": lambda p: production.track_delete(self.song(), p),
+            "clip.place_audio": lambda p: production.clip_place_audio(self.song(), p),
+            "clip.create_midi": lambda p: production.clip_create_midi(self.song(), self._live, p),
+            "device.insert": lambda p: production.device_insert(self.song(), p),
+            "device.set_param": lambda p: production.device_set_param(self.song(), p),
+            "simpler.load": lambda p: production.simpler_load(self.song(), p),
+            "locator.set": lambda p: production.locator_set(self.song(), p),
+            "locator.clear_all": lambda p: production.locator_clear_all(self.song(), p),
             "probe.api": lambda params: handlers.probe_api(self._live, self._live_info),
             "spike.automation_session": lambda p: spikes.automation_session(self.song(), self._live, p),
             "spike.automation_record_start": lambda p: self.spikes.start(self.song(), self._live, p),

@@ -97,6 +97,104 @@ def live_probe_api(client: BridgeClient) -> Dict[str, Any]:
     return client.send_request("probe.api", {})
 
 
+# --- Produccion v1 (T-003) ---
+
+
+def _compact(**kw: Any) -> Dict[str, Any]:
+    """Params sin los None (los opcionales no enviados no deben pisar nada)."""
+    return {k: v for k, v in kw.items() if v is not None}
+
+
+def live_song_set(
+    client: BridgeClient,
+    tempo: Optional[float] = None,
+    signature_numerator: Optional[int] = None,
+    signature_denominator: Optional[int] = None,
+    loop_start: Optional[float] = None,
+    loop_length: Optional[float] = None,
+    loop_on: Optional[bool] = None,
+) -> Dict[str, Any]:
+    return client.send_request("song.set", _compact(
+        tempo=tempo, signature_numerator=signature_numerator,
+        signature_denominator=signature_denominator, loop_start=loop_start,
+        loop_length=loop_length, loop_on=loop_on))
+
+
+def live_track_create(client: BridgeClient, kind: str, name: str, index: int = -1) -> Dict[str, Any]:
+    return client.send_request("track.create", {"kind": kind, "name": name, "index": index})
+
+
+def live_track_set_mixer(
+    client: BridgeClient,
+    track: int,
+    volume_db: Any = None,
+    pan: Optional[float] = None,
+    mute: Optional[bool] = None,
+    solo: Optional[bool] = None,
+) -> Dict[str, Any]:
+    return client.send_request("track.set_mixer", _compact(
+        track=track, volume_db=volume_db, pan=pan, mute=mute, solo=solo))
+
+
+def live_track_delete(client: BridgeClient, track: int, confirm_name: str) -> Dict[str, Any]:
+    return client.send_request("track.delete", {"track": track, "confirm_name": confirm_name})
+
+
+def live_clip_place_audio(
+    client: BridgeClient,
+    track: int,
+    path: str,
+    start_beat: float,
+    length_beats: float,
+    warp_mode: Optional[int] = None,
+    pitch_coarse: Optional[int] = None,
+    gain_db: Optional[float] = None,
+    loop_start: Optional[float] = None,
+    loop_end: Optional[float] = None,
+) -> Dict[str, Any]:
+    return client.send_request("clip.place_audio", _compact(
+        track=track, path=path, start_beat=start_beat, length_beats=length_beats,
+        warp_mode=warp_mode, pitch_coarse=pitch_coarse, gain_db=gain_db,
+        loop_start=loop_start, loop_end=loop_end))
+
+
+def live_clip_create_midi(
+    client: BridgeClient,
+    track: int,
+    start_beat: float,
+    length_beats: float,
+    notes: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    return client.send_request("clip.create_midi", {
+        "track": track, "start_beat": start_beat, "length_beats": length_beats, "notes": notes})
+
+
+def live_device_insert(client: BridgeClient, track: int, name: str, index: int = -1) -> Dict[str, Any]:
+    return client.send_request("device.insert", {"track": track, "name": name, "index": index})
+
+
+def live_device_set_param(
+    client: BridgeClient, track: int, device: Any, name: str, value: float
+) -> Dict[str, Any]:
+    return client.send_request("device.set_param", {
+        "track": track, "device": device, "name": name, "value": value})
+
+
+def live_simpler_load(
+    client: BridgeClient, track: int, device: Any, path: str, playback_mode: Optional[int] = None
+) -> Dict[str, Any]:
+    return client.send_request("simpler.load", _compact(
+        track=track, device=device, path=path, playback_mode=playback_mode))
+
+
+def live_locator_set(client: BridgeClient, time: float, name: str) -> Dict[str, Any]:
+    return client.send_request("locator.set", {"time": time, "name": name})
+
+
+def live_locator_clear_all(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("locator.clear_all", {})
+
+
 # --- Spikes temporales T-002c (automatizacion en Arrangement) ---
 
 

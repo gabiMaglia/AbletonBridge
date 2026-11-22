@@ -150,7 +150,7 @@ class BridgeServer:
 
         try:
             result = self._dispatch(request.cmd, request.params)
-        except _CommandError as exc:
+        except (_CommandError, errors.CommandError) as exc:
             return protocol.encode_error_response(request.id, exc.code, exc.message)
         except Exception as exc:  # noqa: BLE001
             return protocol.encode_error_response(request.id, errors.LOM_ERROR, str(exc))
