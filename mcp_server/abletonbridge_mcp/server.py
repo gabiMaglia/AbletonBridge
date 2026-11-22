@@ -16,9 +16,9 @@ bridge, que es lo que cubren estas funciones + sus tests.
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
-from .client import BridgeClient
+from .client import BridgeClient, BridgeError, BridgeTimeoutError
 
 
 def live_ping(client: BridgeClient) -> Dict[str, Any]:
@@ -287,6 +287,53 @@ def live_locator_status(client: BridgeClient) -> Dict[str, Any]:
 
 def live_locator_clear_all(client: BridgeClient) -> Dict[str, Any]:
     return client.send_request("locator.clear_all", {})
+
+
+def live_bridge_version(client: BridgeClient) -> Dict[str, Any]:
+    """T-011: {version, loaded_at (timestamp de carga de los modulos), reload_count, port}."""
+    return client.send_request("bridge.version", {})
+
+
+def live_bridge_reload(
+    client: BridgeClient,
+    timeout: float = 15.0,
+    poll_interval: float = 0.5,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> Dict[str, Any]:
+    """
+    T-011: recarga los modulos del Remote Script sin reiniciar Live. Manda `bridge.reload` (responde
+    antes de recargar) y reconecta sondeando `bridge.version` hasta que cambie `loaded_at`
+    (o suba `reload_count`). Si no cambia en `timeout` s el reload fallo: ver el log de Live.
+    """
+    before = client.send_request("bridge.version", {})
+    client.send_request("bridge.reload", {})
+    started = clock()
+    deadline = started + timeout
+    after: Optional[Dict[str, Any]] = None
+    while clock() < deadline:
+        client.close()  # el servidor viejo cae al recargar; siempre se reconecta limpio
+        sleep(poll_interval)
+        try:
+            client.connect()
+            current = client.send_request("bridge.version", {})
+        except (OSError, BridgeError):
+            continue
+        if (current.get("loaded_at") != before.get("loaded_at")
+                or current.get("reload_count", 0) > before.get("reload_count", 0)):
+            after = current
+            break
+    if after is None:
+        try:
+            client.close()
+            client.connect()  # dejar el cliente usable
+        except (OSError, BridgeError):
+            pass
+        raise BridgeTimeoutError(
+            f"bridge did not report a new loaded_at within {timeout:g}s; the reload may have failed "
+            "(syntax/import error), check Live's Log.txt"
+        )
+    return {"reloaded": True, "before": before, "after": after, "elapsed_s": round(clock() - started, 3)}
 
 
 # --- Spikes temporales T-002c (automatizacion en Arrangement) ---

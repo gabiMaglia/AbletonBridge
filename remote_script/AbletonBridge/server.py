@@ -20,7 +20,7 @@ de Live.
 import json
 import socket
 import threading
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from . import errors, protocol
 from .dispatcher import UIDispatcher
@@ -69,6 +69,7 @@ class BridgeServer:
         self.port: Optional[int] = None
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self._after_response: List[Callable[[], None]] = []
 
     def bind(self) -> int:
         """Intenta bindear en el puerto preferido, con fallback en el rango. Devuelve el puerto efectivo."""
@@ -100,6 +101,10 @@ class BridgeServer:
         self._thread = threading.Thread(target=self._serve_forever, daemon=True)
         self._thread.start()
 
+    def after_response(self, callback: Callable[[], None]) -> None:
+        """Corre `callback` una sola vez, en el thread del socket, justo despues de enviar la respuesta en curso."""
+        self._after_response.append(callback)
+
     def stop(self) -> None:
         self._stop_event.set()
         if self._sock is not None:
@@ -107,6 +112,10 @@ class BridgeServer:
                 self._sock.close()
             except OSError:
                 pass
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            # Espera corta: el thread sale en <=0.5s y asi el puerto y la conexion quedan libres para un re-bind.
+            thread.join(timeout=1.0)
 
     def _serve_forever(self) -> None:
         assert self._sock is not None
@@ -137,8 +146,17 @@ class BridgeServer:
                     response = self._handle_line(raw_line.decode("utf-8"))
                     if response is not None:
                         conn.sendall(response.encode("utf-8"))
+                    self._run_after_response()
         finally:
             conn.close()
+
+    def _run_after_response(self) -> None:
+        while self._after_response:
+            callback = self._after_response.pop(0)
+            try:
+                callback()
+            except Exception:  # noqa: BLE001 - un callback roto no tumba la conexion
+                pass
 
     def _handle_line(self, line: str) -> Optional[str]:
         try:
