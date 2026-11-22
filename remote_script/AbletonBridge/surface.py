@@ -84,6 +84,7 @@ class AbletonBridge(_Base):
             "return.device_set_param": lambda p: production.return_device_set_param(self.song(), p),
             "return.create": lambda p: production.return_create(self.song(), p),
             "clip.place_audio": lambda p: production.clip_place_audio(self.song(), p),
+            "clip.delete_range": lambda p: production.clip_delete_range(self.song(), p),
             "clip.create_midi": lambda p: production.clip_create_midi(self.song(), self._live, p),
             "device.insert": lambda p: production.device_insert(self.song(), p),
             "device.set_param": lambda p: production.device_set_param(self.song(), p),

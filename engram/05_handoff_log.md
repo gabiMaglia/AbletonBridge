@@ -64,3 +64,6 @@
 
 ### 2026-11-22 nerv-orquestador->nerv-desktop T-009 (sends y returns)
 - Agregados `track.set_send`, `return.list/set_mixer/device_insert/device_set_param/create` + 6 tools MCP `live_*`. Refactor: helpers `_db_arg`/`_set_db` (biseccion compartida), `_apply_mixer`, `_insert_device`/`_set_device_param` aceptan un objeto track (tracks y returns). `return.list` devuelve `{returns, count}` (no lista pelada). Tests 202 verdes. En revision QA. Sin probar en Live real (ver VERIFICAR EN LIVE T-009 en contrato). No existe engram/plans/T-009.md (plan gate sin estampar).
+
+### 2026-11-22 nerv-orquestador->nerv-desktop T-003b (largo exacto de clips de audio)
+- `clip.place_audio` reescrito: tiles parciales / loop_* via slot de Session scratch + `duplicate_clip_to_arrangement` (sin crop), re-busqueda por start_time, verificacion de span (tol 0.01), `method`/`warping` por clip, `one_shot` (sin warp, 1 copia, sin trim). Nuevo `clip.delete_range` + tool `live_clip_delete_range`. Tests 211 verdes (fakes modelan span fijo en Arrangement y span=loop al duplicar). En revision QA. Re-probar en Live (VERIFICAR EN LIVE T-003b en contrato).

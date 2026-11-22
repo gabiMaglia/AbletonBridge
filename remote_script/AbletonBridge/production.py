@@ -21,6 +21,7 @@ AUDIO_EXTENSIONS = (".wav", ".aif", ".aiff", ".mp3", ".flac")
 # VERIFICAR EN LIVE: Clip.warp_mode (0 Beats,1 Tones,2 Texture,3 Re-Pitch,4 Complex,6 Complex Pro)
 WARP_MODES = (0, 1, 2, 3, 4, 6)
 EPS = 1e-6
+SPAN_TOL = 0.01
 DB_TOLERANCE = 0.1
 MAX_COPIES = 512
 _NEG_INF = -1e9
@@ -364,36 +365,16 @@ def _span(clip: Any) -> Optional[float]:
     return end - start if isinstance(start, float) and isinstance(end, float) else None
 
 
-def _trim(clip: Any, target: float, steps: Dict[str, Any], prefix: str) -> None:
-    """Mueve end_marker/loop_end a `target` beats. Solo cambia `length`; el span lo fija _fit_span."""
-    # VERIFICAR EN LIVE: si recortar end_marker alcanza o hace falta loop_end
-    _step(steps, f"{prefix}_trim_end_marker",
-          lambda: setattr(clip, "end_marker", float(clip.start_marker) + target))
-    _step(steps, f"{prefix}_trim_loop_end",
-          lambda: setattr(clip, "loop_end", float(clip.loop_start) + target))
-
-
-def _fit_span(clip: Any, target: float, steps: Dict[str, Any], prefix: str) -> bool:
-    """
-    En Live 12 los markers no acortan el clip de Arrangement: hace falta Clip.crop().
-    Devuelve True si end_time - start_time quedo en `target`.
-    """
-    span = _span(clip)
-    if span is None or abs(span - target) > 1e-3:
-        # VERIFICAR EN LIVE: Clip.crop() sobre un clip de Arrangement ajusta start/end_time
-        _step(steps, f"{prefix}_crop", lambda: clip.crop())
-        span = _span(clip)
-    return span is not None and abs(span - target) <= 1e-3
-
-
-def _clip_summary(clip: Any) -> Dict[str, Any]:
+def _clip_summary(clip: Any, method: str) -> Dict[str, Any]:
     return {
         "start_time": lom_read.get(clip, "start_time"),
         "end_time": lom_read.get(clip, "end_time"),
         "span": _span(clip),
         "length": lom_read.get(clip, "length"),
         "warp_mode": lom_read.get(clip, "warp_mode"),
+        "warping": lom_read.get(clip, "warping"),
         "pitch_coarse": lom_read.get(clip, "pitch_coarse"),
+        "method": method,
     }
 
 
@@ -402,13 +383,124 @@ def _gain_display(clip: Any, raw: float) -> Any:
     return clip.gain_display_string
 
 
+class _Scratch:
+    """
+    Slot de Session vacio para armar tiles parciales (el clip de Session fija el span al
+    duplicarlo). Si el track no tiene slot libre crea una escena, y la borra al liberar.
+    """
+
+    def __init__(self, song: Any, track: Any) -> None:
+        self._song, self._track = song, track
+        self._scene: Optional[int] = None
+        self.slot: Any = None
+
+    def acquire(self) -> Any:
+        if self.slot is not None:
+            return self.slot
+        for slot in self._track.clip_slots:
+            if not slot.has_clip:
+                self.slot = slot
+                return slot
+        self._song.create_scene(-1)  # VERIFICAR EN LIVE: -1 agrega al final
+        self._scene = len(self._song.scenes) - 1
+        self.slot = self._track.clip_slots[self._scene]
+        return self.slot
+
+    def release(self, steps: Dict[str, Any]) -> None:
+        if self.slot is not None and self.slot.has_clip:
+            _step(steps, "scratch_delete_clip", lambda: self.slot.delete_clip())
+        if self._scene is not None:
+            _step(steps, "scratch_delete_scene", lambda: self._song.delete_scene(self._scene))
+
+
+def _apply_clip_settings(clip: Any, key: str, warp_mode: Optional[int], pitch: Optional[int],
+                         steps: Dict[str, Any]) -> None:
+    if warp_mode is not None:
+        _step(steps, f"{key}_warp_mode", lambda: setattr(clip, "warp_mode", warp_mode))
+    if pitch is not None:
+        _step(steps, f"{key}_pitch", lambda: setattr(clip, "pitch_coarse", pitch))
+
+
+def _session_tile(track: Any, scratch: _Scratch, path: str, pos: float, required: float,
+                  section_start: Optional[float], key: str, steps: Dict[str, Any],
+                  setup: Callable[[Any], None]) -> bool:
+    """
+    Arma el tile en el slot scratch (loop == `required`) y lo duplica al Arrangement en `pos`.
+    Devuelve False si no se pudo crear/duplicar. El clip de Arrangement se re-busca aparte.
+    """
+    ok, slot = _step(steps, f"{key}_scratch", scratch.acquire)
+    if not ok:
+        return False
+    ok, _ = _step(steps, f"{key}_session_create", lambda: slot.create_audio_clip(path))
+    if not ok:
+        return False
+    clip = slot.clip  # nunca se confia en lo que devuelve create_audio_clip
+    setup(clip)
+    base = section_start
+    if base is None:
+        base = lom_read.safe(lambda: float(clip.start_marker))
+        base = base if isinstance(base, float) else 0.0
+    # VERIFICAR EN LIVE: orden/aceptacion de loop_end y end_marker menores al natural
+    _step(steps, f"{key}_loop", lambda: _set_range(clip, "loop_start", "loop_end", base, base + required))
+    _step(steps, f"{key}_markers", lambda: _set_range(clip, "start_marker", "end_marker", base, base + required))
+    _step(steps, f"{key}_looping", lambda: setattr(clip, "looping", True))
+    dup_ok, _ = _step(steps, f"{key}_duplicate", lambda: track.duplicate_clip_to_arrangement(clip, pos))
+    _step(steps, f"{key}_scratch_clear", lambda: slot.delete_clip())
+    return dup_ok
+
+
+def _place_one_shot(song: Any, track: Any, idx: int, path: str, start: float,
+                    total: Optional[float], pitch: Optional[int], gain_db: Optional[float]) -> Dict[str, Any]:
+    """Una sola copia sin warp (velocidad original). No se recorta: se informa el span real."""
+    steps: Dict[str, Any] = {}
+    warnings: List[str] = []
+    clips: List[Dict[str, Any]] = []
+    gain_info: Optional[Dict[str, Any]] = {"applied": False} if gain_db is not None else None
+    sample_beats: Optional[float] = None
+    ok, clip = _step(steps, "copy0_create", lambda: _new_audio_clip(track, path, start))
+    if ok:
+        # VERIFICAR EN LIVE: warping=False en un clip de Arrangement y su end_time resultante
+        _step(steps, "copy0_warping", lambda: setattr(clip, "warping", False))
+        if pitch is not None:
+            _step(steps, "copy0_pitch", lambda: setattr(clip, "pitch_coarse", pitch))
+        if gain_db is not None:
+            _apply_gain(clip, "copy0", gain_db, None, steps, gain_info, warnings)
+        # VERIFICAR EN LIVE: Clip.sample_length (muestras) y sample_rate
+        secs = lom_read.safe(lambda: float(clip.sample_length) / float(clip.sample_rate))
+        if isinstance(secs, float):
+            sample_beats = secs * float(song.tempo) / 60.0
+        placed = _find_arrangement_clip(track, start)
+        if placed is None:
+            warnings.append("copy0: clip not found in arrangement_clips after creation")
+        else:
+            clips.append(_clip_summary(placed, "create_audio_clip"))
+    else:
+        warnings.append(f"copy0: clip creation failed: {steps['copy0_create']['error']}")
+    span = clips[0]["span"] if clips else None
+    has_span = isinstance(span, float)
+    if has_span and total is not None and span > total + SPAN_TOL:
+        warnings.append(f"one_shot: clip is {span} beats, longer than the requested {total} "
+                        "(one_shot placement is start-only, not trimmed)")
+    out: Dict[str, Any] = {
+        "ok": bool(clips) and has_span and span > EPS, "track": idx, "clips": clips,
+        "covered_beats": span if has_span else 0.0, "sample_beats": sample_beats,
+        "warnings": warnings, "steps": steps,
+    }
+    if gain_info is not None:
+        out["gain"] = gain_info
+    return out
+
+
 def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     idx, track = _track(song, params)
     if track.has_midi_input:
         raise _bad("track must be an audio track")
     path = _audio_path(params)
     start = _req_num(params, "start_beat", lo=0.0)
-    total = _req_num(params, "length_beats", positive=True)
+    one_shot = bool(_opt_bool(params, "one_shot"))
+    total = _num(params, "length_beats", positive=True)
+    if total is None and not one_shot:
+        raise _bad("length_beats is required (unless one_shot is true)")
     warp_mode = params.get("warp_mode")
     if warp_mode is not None and (not _is_int(warp_mode) or warp_mode not in WARP_MODES):
         raise _bad(f"warp_mode must be one of {WARP_MODES}")
@@ -420,50 +512,80 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
         raise _bad("loop_start and loop_end must be given together")
     if loop_start is not None and loop_end <= loop_start:
         raise _bad("loop_end must be > loop_start")
+    if one_shot:
+        if loop_start is not None:
+            raise _bad("one_shot cannot be combined with loop_start/loop_end")
+        return _place_one_shot(song, track, idx, path, start, total, pitch, gain_db)
 
     steps: Dict[str, Any] = {}
     warnings: List[str] = []
     clips: List[Dict[str, Any]] = []
     gain_info: Optional[Dict[str, Any]] = {"applied": False} if gain_db is not None else None
     gain_raw: Optional[float] = None
+    section = None if loop_start is None else loop_end - loop_start
+    scratch = _Scratch(song, track)
     pos, remaining, n = start, total, 0
     trim_failed = False
 
-    while remaining > EPS and n < MAX_COPIES:
-        key = f"copy{n}"
-        ok, clip = _step(steps, f"{key}_create", lambda: _new_audio_clip(track, path, pos))
-        if not ok:
-            warnings.append(f"{key}: clip creation failed: {steps[f'{key}_create']['error']}")
-            break
-        if warp_mode is not None:
-            _step(steps, f"{key}_warp_mode", lambda: setattr(clip, "warp_mode", warp_mode))
-        if pitch is not None:
-            _step(steps, f"{key}_pitch", lambda: setattr(clip, "pitch_coarse", pitch))
-        if loop_start is not None:
-            _step(steps, f"{key}_loop", lambda: _set_range(clip, "loop_start", "loop_end", loop_start, loop_end))
-            _step(steps, f"{key}_markers", lambda: _set_range(clip, "start_marker", "end_marker", loop_start, loop_end))
-            _step(steps, f"{key}_looping", lambda: setattr(clip, "looping", True))
-        if gain_db is not None:
-            gain_raw = _apply_gain(clip, key, gain_db, gain_raw, steps, gain_info, warnings)
+    def setup(key: str) -> Callable[[Any], None]:
+        def run(clip: Any) -> None:
+            nonlocal gain_raw
+            _apply_clip_settings(clip, key, warp_mode, pitch, steps)
+            if gain_db is not None:
+                gain_raw = _apply_gain(clip, key, gain_db, gain_raw, steps, gain_info, warnings)
+        return run
 
-        length = lom_read.safe(lambda: float(clip.length))
-        if not isinstance(length, float) or length <= EPS:
-            warnings.append(f"{key}: clip has no usable length ({length}); stopped tiling")
-            clips.append(_clip_summary(clip))
-            break
-        target = length
-        if length > remaining + EPS:
-            _trim(clip, remaining, steps, key)
-            target = remaining
-        if not _fit_span(clip, target, steps, key):
-            actual = _span(clip)
-            warnings.append(f"{key}: trim to {target} beats not applied; arrangement span is "
-                            f"{actual} beats (end_time - start_time), the clip overruns the requested length")
-            trim_failed = True
-        clips.append(_clip_summary(clip))
-        pos += target
-        remaining -= target
-        n += 1
+    try:
+        while remaining > EPS and n < MAX_COPIES:
+            key = f"copy{n}"
+            method = "session_duplicate"
+            if section is not None:
+                required = min(section, remaining)
+                built = _session_tile(track, scratch, path, pos, required, loop_start, key, steps, setup(key))
+            else:
+                ok, clip = _step(steps, f"{key}_create", lambda: _new_audio_clip(track, path, pos))
+                if not ok:
+                    warnings.append(f"{key}: clip creation failed: {steps[f'{key}_create']['error']}")
+                    break
+                setup(key)(clip)
+                natural = lom_read.safe(lambda: _span(clip))
+                if not isinstance(natural, float) or natural <= EPS:
+                    natural = lom_read.safe(lambda: float(clip.length))
+                if not isinstance(natural, float) or natural <= EPS:
+                    warnings.append(f"{key}: clip has no usable length ({natural}); stopped tiling")
+                    clips.append(_clip_summary(clip, "create_audio_clip"))
+                    break
+                if natural <= remaining + EPS:
+                    required, built, method = natural, True, "create_audio_clip"
+                else:
+                    # El tile natural pasaria del final: se descarta y se rearma con loop exacto
+                    required = remaining
+                    gone, _ = _step(steps, f"{key}_discard", lambda: track.delete_clip(clip))
+                    if not gone:
+                        warnings.append(f"{key}: could not discard the full-length clip; stopped")
+                        trim_failed = True
+                        break
+                    built = _session_tile(track, scratch, path, pos, required, None, key, steps, setup(key))
+            if not built:
+                warnings.append(f"{key}: session-slot build failed; see steps")
+                trim_failed = True
+                break
+            placed = _find_arrangement_clip(track, pos)
+            if placed is None:
+                warnings.append(f"{key}: clip not found in arrangement_clips at beat {pos}")
+                trim_failed = True
+                break
+            clips.append(_clip_summary(placed, method))
+            actual = _span(placed)
+            if actual is None or abs(actual - required) > SPAN_TOL:
+                warnings.append(f"{key}: requested {required} beats but arrangement span is "
+                                f"{actual} beats (end_time - start_time); trim not applied")
+                trim_failed = True
+            pos += required
+            remaining -= required
+            n += 1
+    finally:
+        scratch.release(steps)
 
     if remaining > EPS and n >= MAX_COPIES:
         warnings.append(f"stopped after {MAX_COPIES} copies")
@@ -476,6 +598,35 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     if gain_info is not None:
         out["gain"] = gain_info
     return out
+
+
+def clip_delete_range(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Borra los clips de Arrangement contenidos por completo en [start_beat, end_beat]."""
+    idx, track = _track(song, params)
+    lo = _req_num(params, "start_beat", lo=0.0)
+    hi = _req_num(params, "end_beat", positive=True)
+    if hi <= lo:
+        raise _bad("end_beat must be > start_beat")
+
+    def inside(c: Any) -> bool:
+        s, e = lom_read.safe(lambda: float(c.start_time)), lom_read.safe(lambda: float(c.end_time))
+        return isinstance(s, float) and isinstance(e, float) and s >= lo - EPS and e <= hi + EPS
+
+    deleted: List[Dict[str, Any]] = []
+    warnings: List[str] = []
+    for _ in range(MAX_COPIES * 4):
+        # Se re-lee la lista en cada vuelta: borrar un clip puede invalidar las referencias
+        victim = next((c for c in track.arrangement_clips if inside(c)), None)
+        if victim is None:
+            break
+        span = {"start_time": float(victim.start_time), "end_time": float(victim.end_time)}
+        try:
+            track.delete_clip(victim)
+        except Exception as exc:  # noqa: BLE001 - evitar bucle infinito sobre un clip que no se borra
+            warnings.append(f"delete_clip failed at {span['start_time']}: {type(exc).__name__}: {exc}")
+            break
+        deleted.append(span)
+    return {"track": idx, "deleted": deleted, "count": len(deleted), "warnings": warnings}
 
 
 def _new_audio_clip(track: Any, path: str, position: float) -> Any:

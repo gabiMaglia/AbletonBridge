@@ -54,12 +54,14 @@ class Simpler(Device):
 
 
 class AClip:
-    """Clip de audio: length = end_marker - start_marker, como en Live."""
+    """
+    Clip de audio como en Live 12.4: el span en Arrangement (end_time) NO sigue a los
+    markers; solo lo fija el loop del clip de Session al duplicarlo. Sin crop().
+    """
 
-    def __init__(self, path, start, natural, honor_trim=True, gain_display=True, honor_crop=True):
+    def __init__(self, path, start, natural, honor_trim=True, gain_display=True):
         self.file_path, self.start_time = path, start
-        # Como en Live 12: el span en Arrangement no sigue a los markers hasta crop()
-        self._end_time, self._honor_crop = start + natural, honor_crop
+        self.end_time = start + natural
         self.start_marker, self.end_marker = 0.0, natural
         self.loop_start, self.loop_end, self.looping = 0.0, natural, False
         self.warping, self.warp_mode, self.pitch_coarse, self.gain = True, 0, 0, 0.4
@@ -68,14 +70,6 @@ class AClip:
     @property
     def length(self):
         return self.end_marker - self.start_marker
-
-    @property
-    def end_time(self):
-        return self._end_time
-
-    def crop(self):
-        if self._honor_crop:
-            self._end_time = self.start_time + self.length
 
     @property
     def gain_display_string(self):
@@ -87,6 +81,27 @@ class AClip:
         if k in ("end_marker", "loop_end") and not self.__dict__.get("_honor", True):
             return
         object.__setattr__(self, k, v)
+
+
+class Slot:
+    def __init__(self, track):
+        self._track, self.clip = track, None
+
+    @property
+    def has_clip(self):
+        return self.clip is not None
+
+    def create_audio_clip(self, path):
+        s = self._track._song
+        # No devuelve el clip a proposito: el codigo debe leer slot.clip
+        self.clip = AClip(path, 0.0, s.natural, s.honor_trim, s.gain_display)
+
+    def delete_clip(self):
+        self.clip = None
+
+
+class Scene:
+    pass
 
 
 class MClip:
@@ -108,12 +123,24 @@ class Track:
         self.has_midi_input, self.name = midi, name
         self.mute, self.solo = False, False
         self.mixer_device, self.devices, self.arrangement_clips = Mixer(), [], []
+        self.clip_slots = [Slot(self) for _ in song.scenes]
 
     def create_audio_clip(self, path, pos):
-        clip = AClip(path, pos, self._song.natural, self._song.honor_trim, self._song.gain_display,
-                     self._song.honor_crop)
+        clip = AClip(path, pos, self._song.natural, self._song.honor_trim, self._song.gain_display)
         self.arrangement_clips.append(clip)
         return clip
+
+    def duplicate_clip_to_arrangement(self, clip, time):
+        # Como el spike real: el span = largo de loop del clip de Session
+        new = AClip(clip.file_path, time, clip.loop_end - clip.loop_start)
+        for k in ("start_marker", "end_marker", "loop_start", "loop_end", "looping",
+                  "warping", "warp_mode", "pitch_coarse", "gain"):
+            object.__setattr__(new, k, getattr(clip, k))
+        self.arrangement_clips.append(new)
+        return None  # la referencia no es confiable: se re-busca por start_time
+
+    def delete_clip(self, clip):
+        self.arrangement_clips.remove(clip)
 
     def create_midi_clip(self, start, length):
         clip = MClip(start, length)
@@ -135,6 +162,7 @@ class Cue:
 
 class Song:
     def __init__(self):
+        self.scenes = [Scene()]
         self.tracks = []
         self.return_tracks = []
         self.tempo, self.signature_numerator, self.signature_denominator = 120.0, 4, 4
@@ -142,7 +170,16 @@ class Song:
         self._time, self._pending, self.cue_points = 0.0, None, []
         self.freeze_playhead = False
         self.natural, self.honor_trim, self.gain_display = 8.0, True, True
-        self.honor_crop = True
+
+    def create_scene(self, i):
+        self.scenes.append(Scene())
+        for t in self.tracks:
+            t.clip_slots.append(Slot(t))
+
+    def delete_scene(self, i):
+        del self.scenes[i]
+        for t in self.tracks:
+            del t.clip_slots[i]
 
     def create_audio_track(self, i):
         self._add(False, i)
@@ -308,51 +345,75 @@ def place(song, wav, **kw):
     return production.clip_place_audio(song, params)
 
 
+def methods(out):
+    return [c["method"] for c in out["clips"]]
+
+
 def test_place_audio_exact_fit(song, wav) -> None:
     out = place(song, wav)
     assert out["ok"] is True and len(out["clips"]) == 1
     c = out["clips"][0]
     assert (c["start_time"], c["end_time"], c["length"]) == (0.0, 8.0, 8.0)
+    assert c["method"] == "create_audio_clip" and c["warping"] is True
 
 
-def test_place_audio_tiles_and_trims_last(song, wav) -> None:
+def test_place_audio_tiles_and_trims_last_via_session_slot(song, wav) -> None:
     out = place(song, wav, start_beat=16.0, length_beats=20.0)
     assert [(c["start_time"], c["end_time"]) for c in out["clips"]] == [
         (16.0, 24.0), (24.0, 32.0), (32.0, 36.0)]
-    assert out["warnings"] == []
+    assert methods(out) == ["create_audio_clip", "create_audio_clip", "session_duplicate"]
+    assert out["warnings"] == [] and out["ok"] is True
+    track = song.tracks[0]
+    assert len(track.arrangement_clips) == 3  # el tile natural descartado no queda
+    assert not any(s.has_clip for s in track.clip_slots)  # scratch limpio
+    assert len(song.scenes) == 1
 
 
 def test_place_audio_trims_long_file(song, wav) -> None:
     out = place(song, wav, length_beats=4.0)
-    assert len(out["clips"]) == 1 and out["clips"][0]["length"] == 4.0
     c = out["clips"][0]
-    assert (c["start_time"], c["end_time"], c["span"]) == (0.0, 4.0, 4.0)
+    assert (c["start_time"], c["end_time"], c["span"], c["length"]) == (0.0, 4.0, 4.0, 4.0)
+    assert c["method"] == "session_duplicate"
     assert out["ok"] is True and out["warnings"] == []
 
 
-def test_place_audio_trim_shortens_arrangement_span_via_crop(song, wav) -> None:
+def test_place_audio_long_natural_in_the_middle(song, wav) -> None:
     song.natural = 32.0
-    out = place(song, wav, start_beat=48.0, length_beats=16.0)
+    out = place(song, wav, start_beat=480.0, length_beats=28.0)
     c = out["clips"][0]
-    assert (c["start_time"], c["end_time"], c["span"], c["length"]) == (48.0, 64.0, 16.0, 16.0)
-    assert song.tracks[0].arrangement_clips[0].end_time == 64.0
+    assert (c["start_time"], c["end_time"], c["span"]) == (480.0, 508.0, 28.0)
+    assert [x.end_time for x in song.tracks[0].arrangement_clips] == [508.0]
 
 
-def test_place_audio_crop_ignored_reports_actual_span(song, wav) -> None:
-    song.natural, song.honor_crop = 32.0, False
-    out = place(song, wav, start_beat=48.0, length_beats=16.0)
+def test_place_audio_never_calls_crop(song, wav) -> None:
+    out = place(song, wav, length_beats=4.0)
+    assert not any("crop" in k for k in out["steps"])
+
+
+def test_place_audio_creates_and_removes_scene_when_no_empty_slot(song, wav) -> None:
+    song.tracks[0].clip_slots[0].clip = AClip(wav, 0.0, 4.0)
+    out = place(song, wav, length_beats=4.0)
+    assert out["ok"] is True and out["clips"][0]["span"] == 4.0
+    assert len(song.scenes) == 1 and len(song.tracks[0].clip_slots) == 1
+    assert song.tracks[0].clip_slots[0].has_clip  # el clip previo del usuario sigue ahi
+
+
+def test_place_audio_trim_ignored_reports_actual_span(song, wav) -> None:
+    song.honor_trim = False
+    out = place(song, wav, length_beats=4.0)
     assert out["ok"] is False
-    assert out["clips"][0]["span"] == 32.0
-    assert any("trim" in w and "32" in w for w in out["warnings"])
+    assert out["clips"][0]["span"] == 8.0
+    assert any("span" in w and "8" in w for w in out["warnings"])
 
 
 def test_place_audio_applies_warp_and_pitch_to_every_copy(song, wav) -> None:
-    out = place(song, wav, length_beats=16.0, warp_mode=6, pitch_coarse=-2)
+    out = place(song, wav, length_beats=12.0, warp_mode=6, pitch_coarse=-2)
+    assert methods(out) == ["create_audio_clip", "session_duplicate"]
     assert [(c["warp_mode"], c["pitch_coarse"]) for c in out["clips"]] == [(6, -2), (6, -2)]
 
 
 def test_place_audio_gain_db(song, wav) -> None:
-    out = place(song, wav, length_beats=16.0, gain_db=-6)
+    out = place(song, wav, length_beats=12.0, gain_db=-6)
     assert abs(float(out["gain"]["display"].split()[0]) + 6) <= 0.1 + 1e-9
     clips = song.tracks[0].arrangement_clips
     assert clips[0].gain == clips[1].gain
@@ -366,18 +427,51 @@ def test_place_audio_gain_unavailable_is_reported_not_fatal(song, wav) -> None:
     assert any("gain" in w for w in out["warnings"])
 
 
-def test_place_audio_trim_impossible_is_reported(song, wav) -> None:
-    song.honor_trim = False
-    out = place(song, wav, length_beats=4.0)
-    assert any("trim" in w for w in out["warnings"])
-    assert out["ok"] is False
-
-
 def test_place_audio_loop_section(song, wav) -> None:
     out = place(song, wav, length_beats=4.0, loop_start=1.0, loop_end=2.0)
     assert [c["length"] for c in out["clips"]] == [1.0] * 4
     assert [c["span"] for c in out["clips"]] == [1.0] * 4
+    assert methods(out) == ["session_duplicate"] * 4
     assert song.tracks[0].arrangement_clips[0].looping is True
+    assert out["ok"] is True
+
+
+def test_place_audio_one_shot_is_placed_once_unwarped(song, wav) -> None:
+    out = place(song, wav, length_beats=40.0, one_shot=True, warp_mode=4)
+    assert len(out["clips"]) == 1
+    c = out["clips"][0]
+    assert c["warping"] is False and c["method"] == "create_audio_clip"
+    assert c["span"] == 8.0 and out["covered_beats"] == 8.0
+    assert out["ok"] is True and out["warnings"] == []
+
+
+def test_place_audio_one_shot_without_length(song, wav) -> None:
+    out = production.clip_place_audio(song, {"track": 0, "path": wav, "start_beat": 4.0, "one_shot": True})
+    assert out["ok"] is True and out["clips"][0]["start_time"] == 4.0
+
+
+def test_place_audio_one_shot_longer_than_requested_warns(song, wav) -> None:
+    out = place(song, wav, length_beats=4.0, one_shot=True)
+    assert out["clips"][0]["span"] == 8.0
+    assert any("one_shot" in w and "8" in w for w in out["warnings"])
+
+
+def test_place_audio_one_shot_reports_sample_beats(song, wav) -> None:
+    AClip.sample_length = 44100 * 4
+    AClip.sample_rate = 44100.0
+    try:
+        out = place(song, wav, one_shot=True)
+    finally:
+        del AClip.sample_length, AClip.sample_rate
+    assert out["sample_beats"] == 8.0  # 4 s a 120 bpm
+
+
+def test_place_audio_length_required_unless_one_shot(song, wav) -> None:
+    assert code_of(production.clip_place_audio, song,
+                   {"track": 0, "path": wav, "start_beat": 0}) == errors.INVALID_PARAMS
+    assert code_of(production.clip_place_audio, song,
+                   {"track": 0, "path": wav, "start_beat": 0, "one_shot": "yes",
+                    "length_beats": 4}) == errors.INVALID_PARAMS
 
 
 def test_place_audio_validation(song, wav, tmp_path) -> None:
@@ -682,3 +776,28 @@ def test_return_create_renames_and_returns_index(rsong) -> None:
     out = production.return_create(rsong, {})
     assert out["index"] == 3 and out["name"] == "New Return"
     assert code_of(production.return_create, rsong, {"name": ""}) == errors.INVALID_PARAMS
+
+
+# --- clip.delete_range ---------------------------------------------------
+
+
+def _arr(song, spans):
+    for st, en in spans:
+        song.tracks[0].arrangement_clips.append(AClip("x", st, en - st))
+
+
+def test_delete_range_deletes_only_clips_fully_inside(song) -> None:
+    _arr(song, [(0, 8), (8, 16), (16, 24), (4, 12), (20, 40)])
+    out = production.clip_delete_range(song, {"track": 0, "start_beat": 8.0, "end_beat": 24.0})
+    assert sorted((d["start_time"], d["end_time"]) for d in out["deleted"]) == [(8.0, 16.0), (16.0, 24.0)]
+    assert out["count"] == 2 and out["track"] == 0
+    assert sorted(c.start_time for c in song.tracks[0].arrangement_clips) == [0, 4, 20]
+
+
+def test_delete_range_validation(song) -> None:
+    assert code_of(production.clip_delete_range, song,
+                   {"track": 0, "start_beat": 8, "end_beat": 8}) == errors.INVALID_PARAMS
+    assert code_of(production.clip_delete_range, song,
+                   {"track": 0, "start_beat": -1, "end_beat": 8}) == errors.INVALID_PARAMS
+    assert code_of(production.clip_delete_range, song,
+                   {"track": 9, "start_beat": 0, "end_beat": 8}) == errors.TRACK_NOT_FOUND

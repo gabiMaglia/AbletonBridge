@@ -145,17 +145,23 @@ def live_clip_place_audio(
     track: int,
     path: str,
     start_beat: float,
-    length_beats: float,
+    length_beats: Optional[float],
     warp_mode: Optional[int] = None,
     pitch_coarse: Optional[int] = None,
     gain_db: Optional[float] = None,
     loop_start: Optional[float] = None,
     loop_end: Optional[float] = None,
+    one_shot: Optional[bool] = None,
 ) -> Dict[str, Any]:
     return client.send_request("clip.place_audio", _compact(
         track=track, path=path, start_beat=start_beat, length_beats=length_beats,
         warp_mode=warp_mode, pitch_coarse=pitch_coarse, gain_db=gain_db,
-        loop_start=loop_start, loop_end=loop_end))
+        loop_start=loop_start, loop_end=loop_end, one_shot=one_shot))
+
+
+def live_clip_delete_range(client: BridgeClient, track: int, start_beat: float, end_beat: float) -> Dict[str, Any]:
+    return client.send_request("clip.delete_range", {
+        "track": track, "start_beat": start_beat, "end_beat": end_beat})
 
 
 def live_clip_create_midi(
