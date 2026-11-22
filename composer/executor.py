@@ -15,7 +15,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from .model import (AUTOMATIZACION, CLIP_LOOP, CLIP_ONESHOT, DISPOSITIVO, LOCATOR, MEZCLA, MIDI, PISTA,
                     RETORNO, SIDECHAIN, Accion)
 from .plan import Plan, agrupar_pasadas
-from .profile import WARP_MODES
+from .profile import WARP_MODES, ItemDesconocido, valor_item
 
 MEDIR_EN_BEAT = 4800.0       # lejos del tema: ahi se mide el largo natural de un one-shot
 MEDIR_LARGO = 64.0
@@ -129,30 +129,68 @@ class Ejecutor:
     def _track(self, rol: str) -> Any:
         return "master" if rol == "master" else self.pista[rol]
 
+    def _seguro(self, que: str, nombre: str, **kw: Any) -> Optional[Dict[str, Any]]:
+        """Llamada de configuracion que puede fallar (param inexistente, plugin ausente): se informa y sigue."""
+        try:
+            return self._llamar(nombre, **kw)
+        except Exception as exc:  # noqa: BLE001 - el puente lanza varios tipos de error
+            self._avisar("%s: %s" % (que, exc))
+            return None
+
+    def _aplicar_valores(self, rol: str, nombre: str, d: Dict[str, Any], track: Any, device: Any) -> None:
+        """params (display) e items cuantizados (nombre EXACTO -> crudo) de un device ya insertado."""
+        def poner(param: str, **valor: Any) -> None:
+            if rol == "master":
+                self._seguro("%s / %s" % (nombre, param), "live_master_device_set_param",
+                             device=device, name=param, **valor)
+            else:
+                self._seguro("%s en %s / %s" % (nombre, rol, param), "live_device_set_param",
+                             track=track, device=device, name=param, **valor)
+        for param, v in d.get("params", {}).items():
+            poner(param, display=v)
+        for param, item in d.get("items", {}).items():
+            try:
+                poner(param, value=valor_item(nombre, param, item))
+            except ItemDesconocido as exc:
+                self._avisar("%s en %s: %s" % (nombre, rol or "master", exc))
+        for texto in d.get("a_mano", []):
+            self._avisar("%s en %s: a mano: %s" % (nombre, rol or "master", texto))
+
     def _dispositivos(self) -> None:
         self.disp: Dict[Tuple[str, str], int] = {}
-        for a in self.plan.de_tipo(DISPOSITIVO):
+        # la cadena se arma en el orden de F4 sec. 6 (EQ -> filtro -> dinamica -> saturacion); sort estable
+        pendientes = [a for a in self.plan.acciones
+                      if a.tipo in (DISPOSITIVO, SIDECHAIN) and not a.datos.get("ultimo")]
+        for a in sorted(pendientes, key=lambda x: x.datos.get("orden", 50)):
             d = a.datos
-            if d.get("ultimo"):
-                continue  # el Utility va al final, despues de todo lo demas
+            if a.tipo == SIDECHAIN:
+                nombre = d["dispositivo"]
+                idx = self._llamar("live_device_insert", track=self.pista[a.rol], name=nombre)["index"]
+                self._llamar("live_compressor_set_sidechain", track=self.pista[a.rol], device=idx,
+                             source_track_name=d["fuente"])
+                self._aplicar_valores(a.rol, nombre, d, self.pista[a.rol], idx)
+                continue
             if a.rol == "master":
-                self._llamar("live_master_device_insert", name=d["nombre"])
-                for p, v in d.get("params", {}).items():
-                    self._llamar("live_master_device_set_param", device=d["nombre"], name=p, display=v)
+                self._seguro("master / %s" % d["nombre"], "live_master_device_insert", name=d["nombre"])
+                idx, track = d["nombre"], None
             else:
-                idx = self._llamar("live_device_insert", track=self.pista[a.rol], name=d["nombre"])["index"]
+                r = self._seguro("%s en %s" % (d["nombre"], a.rol), "live_device_insert",
+                                 track=self.pista[a.rol], name=d["nombre"])
+                if r is None:
+                    continue
+                idx, track = r["index"], self.pista[a.rol]
                 self.disp[(a.rol, d["nombre"])] = idx
                 if d.get("cargar_muestra"):
-                    self._llamar("live_simpler_load", track=self.pista[a.rol], device=idx,
+                    self._llamar("live_simpler_load", track=track, device=idx,
                                  path=self.plan.elementos[a.rol]["ruta"], playback_mode=PLAYBACK_ONE_SHOT)
-                for p, v in d.get("params", {}).items():
-                    self._llamar("live_device_set_param", track=self.pista[a.rol], device=d["nombre"], name=p, display=v)
+            if d.get("plugin"):
+                self._avisar("%s en %s: plugin de terceros (reemplaza %s); sus valores van a mano (equivale a %s)" % (
+                    d["nombre"], a.rol or "master", d["reemplaza"], d.get("equivale")))
+            else:
+                self._aplicar_valores(a.rol, d["nombre"], d, track, idx)
             if d.get("nota"):
-                self._avisar("%s en %s: %s (a mano si el puente no lo expone)" % (d["nombre"], a.rol or "master", d["nota"]))
-        for a in self.plan.de_tipo(SIDECHAIN):
-            idx = self._llamar("live_device_insert", track=self.pista[a.rol], name=a.datos["dispositivo"])["index"]
-            self._llamar("live_compressor_set_sidechain", track=self.pista[a.rol], device=idx,
-                         source_track_name=a.datos["fuente"])
+                self._avisar("%s en %s: %s (a mano si el puente no lo expone)" % (
+                    d["nombre"], a.rol or "master", d["nota"]))
 
     def _mezcla(self) -> None:
         for a in self.plan.de_tipo(MEZCLA):
@@ -182,7 +220,8 @@ class Ejecutor:
 
     def _colocar(self, a: Accion, rol: str, inicio: float, largo: float) -> Dict[str, Any]:
         el = self.plan.elementos[rol]
-        r = self._llamar("live_clip_place_audio", track=self.pista[rol], path=el["ruta"], start_beat=inicio,
+        r = self._llamar("live_clip_place_audio", track=self.pista[rol], path=a.datos.get("ruta") or el["ruta"],
+                         start_beat=inicio,
                          length_beats=largo, warp_mode=self._warp(rol, a), pitch_coarse=a.datos.get("pitch", el["pitch"]))
         if r.get("ok") is False:
             self._avisar("clip %s en beat %g: %s" % (rol, inicio, r.get("warnings")))
@@ -191,12 +230,13 @@ class Ejecutor:
     def _oneshot(self, a: Accion) -> None:
         el = self.plan.elementos[a.rol]
         warp = self._warp(a.rol, a)
-        clave = (el["ruta"], warp)
+        ruta = a.datos.get("ruta") or el["ruta"]
+        clave = (ruta, warp)
         if clave not in self.spans:
-            if self.dry_run and el.get("natural_beats"):
+            if self.dry_run and el.get("natural_beats") and ruta == el["ruta"]:
                 self.spans[clave] = el["natural_beats"]
             else:
-                r = self._llamar("live_clip_place_audio", track=self.pista[a.rol], path=el["ruta"],
+                r = self._llamar("live_clip_place_audio", track=self.pista[a.rol], path=ruta,
                                  start_beat=MEDIR_EN_BEAT, length_beats=MEDIR_LARGO, warp_mode=warp)
                 self.spans[clave] = float(r["clips"][0]["span"])
                 self._llamar("live_clip_delete_range", track=self.pista[a.rol], start_beat=MEDIR_EN_BEAT,
@@ -230,6 +270,8 @@ class Ejecutor:
             if a.datos.get("ultimo"):
                 r = self._llamar("live_utility_ensure_last", track=self._track(a.rol))
                 self.objetivo_utility[a.rol] = r["target"]
+                if a.datos.get("items") or a.datos.get("params"):   # p. ej. Bass Mono de los graves
+                    self._aplicar_valores(a.rol, "Utility", a.datos, self._track(a.rol), r["target"]["device"])
 
     def _automatizacion(self) -> None:
         lanes = self.plan.de_tipo(AUTOMATIZACION)
@@ -243,6 +285,8 @@ class Ejecutor:
 
     def _lane(self, a: Accion) -> Dict[str, Any]:
         objetivo = a.datos["objetivo"]
-        if isinstance(objetivo, dict) and objetivo["device"] == "Utility":
+        if isinstance(objetivo, dict) and "send" in objetivo:   # posicion en el plan -> indice real del retorno
+            objetivo = {"send": self.ret_idx[objetivo["send"]]}
+        elif isinstance(objetivo, dict) and objetivo["device"] == "Utility":
             objetivo = self.objetivo_utility[a.rol]
         return {"track": self._track(a.rol), "target": objetivo, "points": a.datos["puntos"]}

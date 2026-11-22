@@ -46,13 +46,29 @@ MATERIAL_T02 = {
     "riser_largo": (Z + r"\one_shots\fx_one_shots\fx_sweep_up_one_shots\ZEN_PDT_fx_sweep_up_one_shot_excite.wav", 0),
     "riser_corto": (A + r"\One_Shots\FX\Riser\AU_PTT_fx_riser_one_shot_basic.wav", 0),
 }
+# Variedad de FX (respuesta de Gabriel): otros archivos de las mismas librerias, sin tonalidad en el nombre.
+# Cada rol rota entre su archivo de MATERIAL_T02 y estos, sin repetir seguido.
+_REV = A + r"\One_Shots\FX\Reverse_Atmos\AU_PTT_fx_reverse_atmos_one_shot_"
+_UP = Z + r"\one_shots\fx_one_shots\fx_sweep_up_one_shots\ZEN_PDT_fx_sweep_up_one_shot_"
+_DOWN = Z + r"\one_shots\fx_one_shots\fx_sweep_down_one_shots\ZEN_PDT_fx_sweep_down_one_shot_"
+_PERC = Z + r"\one_shots\perc_fx_one_shots\ZEN_PDT_perc_fx_one_shot_"
+ALTERNATIVAS_FX = {
+    "reverse": tuple(_REV + n + ".wav" for n in ("expand", "peak", "whisper")) + (
+        A + r"\One_Shots\FX\Reverse_Perc\AU_PTT_fx_reverse_perc_one_shot_riot.wav",),
+    "impacto": tuple(_PERC + n + ".wav" for n in ("serious", "ghost")),
+    "sweep_up": tuple(_UP + n + ".wav" for n in ("connecto", "hill", "groot", "simple", "stapper", "twist")),
+    "sweep_down": tuple(_DOWN + n + ".wav" for n in ("candy", "carousel", "tooth", "tortuga", "wheel")),
+    "roll": tuple(DC + r"\134_drumrolls_%s.wav" % n for n in ("03", "04")),
+    "roll_32": (DC + r"\134_drumrolls_05.wav",),
+}
 # Largos naturales medidos en T02 (beats a 134 BPM); el ejecutor igual los vuelve a medir en Live.
 LARGOS_T02 = {"sweep_up": 31.76, "sweep_down": 15.88, "riser_largo": 47.56, "riser_corto": 4.62 * 134 / 60}
 
 
 def generar_plan_t03() -> Plan:
     perfil = cargar_perfil()
-    elementos = {rol: Elemento(rol=rol, ruta=ruta, pitch=pitch, natural_beats=LARGOS_T02.get(rol))
+    elementos = {rol: Elemento(rol=rol, ruta=ruta, pitch=pitch, natural_beats=LARGOS_T02.get(rol),
+                         alternativas=ALTERNATIVAS_FX.get(rol, ()))
                  for rol, (ruta, pitch) in MATERIAL_T02.items()}
     ctx = Contexto(perfil=perfil, estructura=construir_estructura(perfil, "t02_like"),
                    elementos=elementos, tempo=TEMPO)

@@ -9,8 +9,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from .model import (AUTOMATIZACION, CLIP_LOOP, CLIP_ONESHOT, DISPOSITIVO, LOCATOR, MEZCLA, MIDI, PISTA,
-                    RETORNO, SIDECHAIN, Accion, Elemento, Run, Timeline)
+from .model import (AUTOMATIZACION, CLIP_LOOP, CLIP_ONESHOT, DECISION, DISPOSITIVO, LOCATOR, MEZCLA, MIDI,
+                    PISTA, RETORNO, SIDECHAIN, Accion, Elemento, Run, Timeline)
 from .profile import Perfil
 from .structure import BEATS_POR_COMPAS, Estructura, Seccion, compas_a_beat, nivel_de_frase
 
@@ -25,6 +25,8 @@ class Contexto:
     estructura: Estructura
     elementos: Dict[str, Elemento]
     tempo: float = 130.0
+    reglas_experimentales: bool = False      # activa las reglas del perfil marcadas `experimental`
+    plugins: Tuple[str, ...] = ()            # plugins de terceros (catalogo del perfil) en lugar de los nativos
 
     def tiene(self, rol: str) -> bool:
         return rol in self.elementos
@@ -149,18 +151,23 @@ def presencia(ctx: Contexto) -> Dict[str, List[Run]]:
     est = ctx.estructura
     # 1) limite de seccion tras una frase de 32: caen rumble y bajo ese compas
     hk = ctx.perfil.regla("huecos_kick")
+    primer_drop = next(iter(est.de_tipo("drop")), None)
     for sec in est.secciones[1:]:
         bar = sec.inicio - 1
+        if hk.get("solo_al_entrar_a") == "primer_drop" and (primer_drop is None or sec.id != primer_drop.id):
+            continue            # en los demas fines de 32 solo cae el kick
         if nivel_de_frase(bar) == 32:
             for rol in hk["silencian_en_limite_de_seccion_nivel_32"]:
                 if rol in runs:
                     runs[rol] = _restar(runs[rol], (compas_a_beat(bar), compas_a_beat(bar + 1)))
     # 2) llamado y respuesta: el que responde calla en las unidades en que llama la voz
     base = presencia_base(ctx)
-    for par in ctx.perfil.regla("llamado_respuesta")["pares"]:
+    lr = ctx.perfil.regla("llamado_respuesta")
+    activa = ctx.reglas_experimentales or lr.get("activa_por_defecto", not lr.get("experimental", False))
+    for par in (lr["pares"] if activa else []):
         llama, responde = par["llama"], par["responde"]
-        if responde not in runs:
-            continue
+        if responde is None or responde not in runs:
+            continue            # sin instrumento asignado: no hace nada
         unidad = par["unidad_compases"] * BEATS_POR_COMPAS
         for a, b in base.get(llama, []):
             k, t = 0, a
@@ -470,17 +477,108 @@ def regla_apertura_lead(ctx: Contexto, base: Dict[str, List[Run]]) -> List[Accio
     return acciones
 
 
-def regla_entrada_filtrada(ctx: Contexto, base: Dict[str, List[Run]]) -> List[Accion]:
+def regla_entrada_filtrada(ctx: Contexto, existentes: List[Accion]) -> List[Accion]:
+    """Un elemento nuevo (primera aparicion o entrada del puente) abre un Auto Filter 300 Hz -> 16 kHz en 8 compases.
+
+    No cuenta el que culmina el riser (entra de golpe en el inicio del puente).
+    """
     cfg = ctx.perfil.regla("entrada_filtrada")
+    runs = _presencia_sin_cortes(ctx)
+    culminacion = {sec.beat_inicio for sec in ctx.estructura.de_tipo("breakdown")}
+    del_puente: Dict[str, set] = defaultdict(set)
+    for sec in ctx.estructura.de_tipo("breakdown"):
+        for rol, entrada, _, _ in _entradas_puente(ctx, sec):
+            del_puente[rol].add(entrada)
+    largo = cfg["compases"] * BEATS_POR_COMPAS
     acciones = []
     for rol in cfg["roles"]:
-        for a, b in base.get(rol, []):
-            largo = cfg["compases"] * BEATS_POR_COMPAS
-            if ctx.estructura.seccion_en(int(a // 4) + 1).tipo == "breakdown" or b - a < largo:
+        if not ctx.tiene(rol):
+            continue
+        for k, (a, b) in enumerate(runs.get(rol, [])):
+            if not (k == 0 or a in del_puente[rol]) or a in culminacion:
                 continue
-            acciones.append(_lane(rol, {"device": cfg["dispositivo"], "param": cfg["parametro"]},
-                                  [[a, D(cfg["desde_hz"])], [a + largo, D(cfg["hasta_hz"])]],
+            fin = min(a + largo, b)
+            objetivo = {"device": cfg["dispositivo"], "param": cfg["parametro"]}
+            propias = [x for x in existentes if x.rol == rol and x.datos["objetivo"] == objetivo]
+            if any(x.inicio <= a < x.fin for x in propias):
+                continue            # ya hay otra lane de filtro corriendo en ese momento
+            fin = min([fin] + [x.inicio - FIN_DE_LANE for x in propias if x.inicio > a])   # no pisa la siguiente
+            if fin - a < BEATS_POR_COMPAS:
+                continue
+            acciones.append(_lane(rol, objetivo,
+                                  [[a, D(cfg["desde_hz"])], [fin, D(cfg["hasta_hz"])]],
                                   "entrada_filtrada", "elemento nuevo: entra filtrado y abre en 8 compases"))
+    return acciones
+
+
+def regla_delay_throws(ctx: Contexto, pres: Dict[str, List[Run]]) -> List[Accion]:
+    """Send al retorno Delay grabado: sube en el ultimo medio compas de cada frase de voz y vuelve a apagarse."""
+    cfg = ctx.perfil.regla("delay_throws_voces")
+    pos = [r["id"] for r in ctx.perfil.dato("retornos")].index(cfg["retorno"])
+    frase = cfg["frase_compases"] * BEATS_POR_COMPAS
+    v = cfg["ventana_beats"]
+    acciones = []
+    for rol in cfg["roles"]:
+        if not ctx.tiene(rol):
+            continue
+        for a, b in pres.get(rol, []):
+            pts: List[List[Any]] = []
+            for i in range(1, int((b - a) // frase) + 1):
+                e = a + i * frase
+                pts += [[e - v, D(cfg["envio_off_db"])], [e - v + 0.25, D(cfg["envio_pico_db"])],
+                        [e - 0.25, D(cfg["envio_pico_db"])], [e, D(cfg["envio_off_db"])]]
+            if pts:
+                acciones.append(_lane(rol, {"send": pos}, pts, "delay_throws_voces",
+                                      "eco de delay en el ultimo medio compas de cada frase de voz"))
+    return acciones
+
+
+def regla_variedad_fx(ctx: Contexto, acciones: List[Accion]) -> List[Accion]:
+    """Rota los archivos de cada rol de FX en orden temporal (determinista, nunca el mismo dos veces seguidas)."""
+    roles = ctx.perfil.regla("variedad_fx")["roles"]
+    por_rol: Dict[str, List[int]] = defaultdict(list)
+    for i, a in enumerate(acciones):
+        if a.rol in roles and ctx.tiene(a.rol) and a.tipo in (CLIP_ONESHOT, CLIP_LOOP):
+            por_rol[a.rol].append(i)
+    out = list(acciones)
+    for rol, idxs in por_rol.items():
+        el = ctx.elementos[rol]
+        opciones = (el.ruta,) + tuple(el.alternativas)
+        if len(opciones) < 2:
+            continue
+        idxs.sort(key=lambda i: (acciones[i].inicio, acciones[i].regla, acciones[i].fin or 0.0))
+        for k, i in enumerate(idxs):
+            a = acciones[i]
+            out[i] = Accion(a.tipo, a.rol, a.inicio, a.fin, {**a.datos, "ruta": opciones[k % len(opciones)]},
+                            a.regla, a.por_que + " (archivo rotado)")
+    return out
+
+
+def regla_decisiones(ctx: Contexto) -> List[Accion]:
+    """Deja escritas en el plan las decisiones de arreglo que no son un clip ni una lane."""
+    est = ctx.estructura
+    acciones = []
+    cp = ctx.perfil.regla("corte_previo_al_drop")
+    for sec in est.de_tipo("drop"):
+        prev = est.anterior(sec)
+        if prev is not None and prev.tipo != "silence":
+            acciones.append(Accion(DECISION, "", sec.beat_inicio - cp["beats"], sec.beat_inicio,
+                                   {"que": "corte de %d tiempos antes de %s: solo queda %s" % (
+                                       cp["beats"], sec.id, ", ".join(cp["conserva"])),
+                                    "conserva": list(cp["conserva"])},
+                                   "corte_previo_al_drop", "anacrusa antes del drop (Gabriel: si)"))
+    hk = ctx.perfil.regla("huecos_kick")
+    drops = est.de_tipo("drop")
+    if drops and drops[0].inicio > 1 and nivel_de_frase(drops[0].inicio - 1) == 32:
+        b = compas_a_beat(drops[0].inicio - 1)
+        acciones.append(Accion(DECISION, "", b, drops[0].beat_inicio,
+                               {"que": "rumble y bajo caen solo aca (fin de 32 que entra al %s); en los demas fines de 32 solo cae el kick" % drops[0].id,
+                                "roles": list(hk["silencian_en_limite_de_seccion_nivel_32"])},
+                               "rumble_y_bajo", "Gabriel: solo en el compas que entra al Main"))
+    if hk.get("sin_huecos_en_el_ultimo_compas_del_tema"):
+        acciones.append(Accion(DECISION, "", compas_a_beat(est.total_compases), est.beat_final,
+                               {"que": "ultimo compas: kick entero, sin hueco ni fills"},
+                               "ultimo_compas", "salida limpia para el DJ (Gabriel)"))
     return acciones
 
 
@@ -521,9 +619,71 @@ def _receta_filtro(ctx: Contexto, rol: str) -> Tuple[Dict[str, Any], Optional[st
     return {}, None
 
 
+# Orden de la cadena (F4 sec. 6): instrumento -> EQ -> filtro -> dinamica -> saturacion -> ... -> Utility ultimo
+ORDEN_CADENA = {"Simpler": 0, "EQ Eight": 10, "Auto Filter": 20, "Drum Buss": 30, "Compressor": 32,
+                "Glue Compressor": 33, "Saturator": 40, "Limiter": 90}
+
+
+def _plugin_para(ctx: Contexto, rol: str, nativo: str) -> Optional[str]:
+    """Plugin de terceros pedido que reemplaza a `nativo` en `rol` (el primero de la lista que aplica)."""
+    catalogo = ctx.perfil.dato("mezcla", "plugins", "catalogo")
+    for nombre in ctx.plugins:
+        c = catalogo[nombre]
+        if c["reemplaza"] == nativo and ("*" in c["roles"] or rol in c["roles"]):
+            return nombre
+    return None
+
+
+def _dispositivo(ctx: Contexto, rol: str, nativo: str, params: Optional[Dict[str, Any]] = None,
+                 items: Optional[Dict[str, str]] = None) -> Accion:
+    """DISPOSITIVO nativo, o el plugin elegido (se inserta por nombre y sus valores van a mano)."""
+    datos: Dict[str, Any] = {"nombre": nativo, "orden": ORDEN_CADENA[nativo]}
+    if params:
+        datos["params"] = dict(params)
+    if items:
+        datos["items"] = dict(items)
+    plugin = _plugin_para(ctx, rol, nativo)
+    if plugin:
+        datos = {"nombre": plugin, "plugin": True, "reemplaza": nativo, "orden": ORDEN_CADENA[nativo],
+                 "equivale": {k: v for k, v in (("params", params), ("items", items)) if v}}
+    return Accion(DISPOSITIVO, rol, 0.0, None, datos, "setup",
+                  "plugin %s en lugar de %s" % (plugin, nativo) if plugin else "cadena de mezcla del rol (F4 sec. 6)")
+
+
+def _eq(bandas: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], Dict[str, str]]:
+    params: Dict[str, Any] = {}
+    items: Dict[str, str] = {}
+    for b in bandas:
+        n = b["banda"]
+        items["%d Filter On A" % n], items["%d Filter Type A" % n] = "On", b["tipo"]
+        params["%d Frequency A" % n] = b["hz"]
+        if "gain_db" in b:
+            params["%d Gain A" % n] = b["gain_db"]
+        if "q" in b:
+            params["%d Q A" % n] = b["q"]
+    return params, items
+
+
+def _cadena_de_rol(ctx: Contexto, rol: str, tpl: Dict[str, Any]) -> List[Accion]:
+    acciones = []
+    if tpl.get("eq"):
+        params, items = _eq(tpl["eq"])
+        acciones.append(_dispositivo(ctx, rol, "EQ Eight", params, items))
+    for clave in ("dinamica", "saturacion"):
+        if clave in tpl:
+            d = tpl[clave]
+            acciones.append(_dispositivo(ctx, rol, d["dispositivo"], d.get("params"), d.get("items")))
+    return acciones
+
+
 def regla_setup(ctx: Contexto, timeline: Timeline) -> List[Accion]:
-    """Retornos, pistas, mezcla estatica, dispositivos y sidechain para lo que el timeline usa."""
+    """Retornos, pistas, mezcla estatica, cadena de dispositivos, sidechain y master para lo que el timeline usa."""
     p = ctx.perfil
+    catalogo = p.dato("mezcla", "plugins", "catalogo")
+    for nombre in ctx.plugins:
+        if nombre not in catalogo:
+            raise ValueError("plugin %r fuera del catalogo del perfil (%s)" % (nombre, ", ".join(catalogo)))
+    plantilla = p.dato("mezcla", "plantilla")
     usados = {a.rol for a in timeline.acciones if a.tipo in (CLIP_LOOP, CLIP_ONESHOT, MIDI)}
     acciones = [Accion(RETORNO, "", 0.0, None, {"id": r["id"], "nombre": r["nombre"]}, "setup", "retornos del tema")
                 for r in p.dato("retornos")]
@@ -532,6 +692,7 @@ def regla_setup(ctx: Contexto, timeline: Timeline) -> List[Accion]:
     for rol in p.dato("elementos"):
         if rol in usados and ctx.tiene(rol):
             pistas.setdefault(p.rol(rol)["pista"], []).append(rol)
+    utilidades: Dict[str, Dict[str, Any]] = {}
     for nombre, roles in pistas.items():
         primero = p.rol(roles[0])
         kind = "midi" if primero["tipo"] == "midi" else "audio"
@@ -542,16 +703,23 @@ def regla_setup(ctx: Contexto, timeline: Timeline) -> List[Accion]:
                                {"volumen_db": primero["nivel_db"], "envios": {str(k): v for k, v in envios.items()}},
                                "setup", "mezcla inicial estatica (el fader queda libre, D-15)"))
         if kind == "midi":
-            acciones.append(Accion(DISPOSITIVO, roles[0], 0.0, None, {"nombre": "Simpler", "cargar_muestra": True},
+            acciones.append(Accion(DISPOSITIVO, roles[0], 0.0, None,
+                                   {"nombre": "Simpler", "cargar_muestra": True, "orden": ORDEN_CADENA["Simpler"]},
                                    "setup", "Simpler one-shot para el rol MIDI"))
+        tpl = plantilla.get(roles[0])
+        if tpl:
+            acciones += _cadena_de_rol(ctx, roles[0], tpl)
+            if "utility" in tpl:
+                utilidades[roles[0]] = {"nombre": "Utility", "ultimo": True, "params": dict(tpl["utility"]["params"]),
+                                        "items": dict(tpl["utility"]["items"])}
     # filtros: uno por (rol, destino) con lane de Auto Filter, con su receta fija
     vistos = set()
     for a in timeline.de_tipo(AUTOMATIZACION):
         obj = a.datos["objetivo"]
-        if isinstance(obj, dict) and obj["device"] == "Auto Filter" and a.rol not in vistos:
+        if isinstance(obj, dict) and obj.get("device") == "Auto Filter" and a.rol not in vistos:
             vistos.add(a.rol)
             params, nota = _receta_filtro(ctx, a.rol) if a.rol != "master" else ({}, "HP en el master")
-            datos: Dict[str, Any] = {"nombre": "Auto Filter"}
+            datos: Dict[str, Any] = {"nombre": "Auto Filter", "orden": ORDEN_CADENA["Auto Filter"]}
             if params:
                 datos["params"] = {"Resonance": params["resonancia_pct"], "Drive": params["drive_pct"]}
             if nota:
@@ -563,13 +731,21 @@ def regla_setup(ctx: Contexto, timeline: Timeline) -> List[Accion]:
     if ctx.tiene(sc["fuente_track"]) and sc["fuente_track"] in usados:
         for rol in sc["destinos"]:
             if rol in usados:
-                acciones.append(Accion(SIDECHAIN, rol, 0.0, None,
-                                       {"fuente": p.rol(sc["fuente_track"])["pista"], "dispositivo": sc["dispositivo"]},
-                                       "setup", "rumble y bajo bombean con el kick"))
-    # Utility ULTIMO para toda lane de nivel (D-15)
+                datos = {"fuente": p.rol(sc["fuente_track"])["pista"], "dispositivo": sc["dispositivo"],
+                         "orden": ORDEN_CADENA[sc["dispositivo"]], **sc.get("por_destino", {}).get(rol, {})}
+                acciones.append(Accion(SIDECHAIN, rol, 0.0, None, datos, "setup", "rumble y bajo bombean con el kick"))
+    # Utility ULTIMO: nivel de las lanes (D-15) y/o Bass Mono de los graves
     for rol in sorted({a.rol for a in timeline.de_tipo(AUTOMATIZACION) if a.datos["objetivo"] == OBJ_UTILITY}):
-        acciones.append(Accion(DISPOSITIVO, rol, 0.0, None, {"nombre": "Utility", "ultimo": True}, "setup",
-                               "D-15: el nivel se automatiza en un Utility al final de la cadena"))
+        utilidades.setdefault(rol, {"nombre": "Utility", "ultimo": True})
+    for rol in sorted(utilidades):
+        acciones.append(Accion(DISPOSITIVO, rol, 0.0, None, utilidades[rol], "setup",
+                               "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"))
+    # master: Glue -> Limiter (los items sin catalogo van a mano)
+    for d in p.dato("master", "plantilla"):
+        a = _dispositivo(ctx, "master", d["dispositivo"], d.get("params"))
+        if d.get("a_mano"):
+            a.datos["a_mano"] = list(d["a_mano"])
+        acciones.append(a)
     return acciones
 
 
@@ -590,8 +766,11 @@ def generar_timeline(ctx: Contexto) -> Timeline:
     tl.agregar(*regla_puente(ctx, pres))
     tl.agregar(*regla_escalera(ctx, base))
     tl.agregar(*regla_apertura_lead(ctx, base))
-    tl.agregar(*regla_entrada_filtrada(ctx, base))
+    tl.agregar(*regla_entrada_filtrada(ctx, tl.de_tipo(AUTOMATIZACION)))
+    tl.agregar(*regla_delay_throws(ctx, pres))
     tl.agregar(*regla_pan(ctx, _presencia_sin_cortes(ctx)))
+    tl.acciones = regla_variedad_fx(ctx, tl.acciones)
+    tl.agregar(*regla_decisiones(ctx))
     tl.agregar(*regla_setup(ctx, tl))
     tl.ordenar()
     return tl

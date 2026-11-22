@@ -80,3 +80,27 @@ def test_el_plan_t02_like_agrupa_en_pocas_pasadas(ctx_t02):
     tl = rules.generar_timeline(ctx_t02)
     pasadas = agrupar_pasadas(tl.de_tipo(AUTOMATIZACION))
     assert 1 <= len(pasadas) <= 4
+
+
+def test_markdown_lista_decisiones_y_reglas_experimentales(ctx_t02):
+    plan = crear_plan(ctx_t02, nombre="T03")
+    md = plan_a_markdown(plan)
+    assert plan.meta["experimentales"] == {"llamado_respuesta": False}
+    assert "## Decisiones de arreglo" in md
+    for texto in ("corte_previo_al_drop", "ultimo_compas", "64.3", "192", "experimental"):
+        assert texto in md, texto
+
+
+def test_markdown_muestra_lanes_de_send_y_cadenas(ctx_t02):
+    md = plan_a_markdown(crear_plan(ctx_t02, nombre="T03"))
+    assert "send " in md and "delay_throws_voces" in md
+    assert "EQ Eight" in md and "High Pass 12dB" in md and "Bass Mono" in md
+
+
+def test_json_ida_y_vuelta_con_rutas_alternativas(make_ctx):
+    from tests.test_composer.test_t015b_rules import GROOVES
+    ctx = make_ctx(GROOVES, roles=["kick", "reverse"], alternativas={"reverse": ["C:\\pack\\rev_b.wav"]})
+    plan = crear_plan(ctx, nombre="x")
+    otro = plan_desde_json(plan_a_json(plan))
+    assert [a.__dict__ for a in otro.acciones] == [a.__dict__ for a in plan.acciones]
+    assert plan.elementos["reverse"]["alternativas"] == ["C:\\pack\\rev_b.wav"]

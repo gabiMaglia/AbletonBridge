@@ -29,3 +29,22 @@ def test_dry_run_del_plan_t03_no_pide_volume_ni_mas_de_16_lanes_por_pasada():
         if l.nombre == "live_automation_record":
             assert len(l.kwargs["lanes"]) <= 16
             assert all(ln["target"] != "volume" for ln in l.kwargs["lanes"])
+
+
+def test_t03_usa_archivos_variados_y_ecos_de_voz():
+    from composer.model import CLIP_ONESHOT
+    plan = generar_plan_t03()
+    rutas = {a.datos.get("ruta") for a in plan.acciones if a.rol == "reverse" and a.tipo == CLIP_ONESHOT}
+    assert len(rutas) >= 3
+    assert any(a.regla == "delay_throws_voces" for a in plan.acciones)
+    assert plan.meta["experimentales"] == {"llamado_respuesta": False}
+
+
+def test_los_archivos_alternativos_del_t03_existen_o_se_omite():
+    import os
+    from composer.t03 import MATERIAL_T02, ALTERNATIVAS_FX
+    if not os.path.isdir(MATERIAL_T02["kick"][0].rsplit("\\", 4)[0]):
+        return
+    for rol, rutas in ALTERNATIVAS_FX.items():
+        for r in rutas:
+            assert os.path.exists(r), (rol, r)

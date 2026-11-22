@@ -327,10 +327,20 @@ def test_recetas_de_filtro_como_valores_fijos(ctx_t02):
 
 # --- llamado y respuesta --------------------------------------------------------------------
 
-def test_stab_y_voz_se_alternan_de_a_2_compases(make_ctx):
-    ctx = make_ctx([S("m", "drop", 16, suma=["kick", "stab"],
-                      ocasionales=[{"rol": "vox_acid", "fraseo": "ultimos_8_de_16"}])],
-                   roles=["kick", "stab", "vox_acid"])
+def _con_par(ctx, responde):
+    import copy
+    from composer.profile import Perfil
+    datos = copy.deepcopy(ctx.perfil.datos)
+    datos["reglas"]["llamado_respuesta"]["pares"] = [{"llama": "vox_acid", "responde": responde, "unidad_compases": 2}]
+    ctx.perfil = Perfil(datos=datos)
+    return ctx
+
+
+def test_stab_y_voz_se_alternan_de_a_2_compases_solo_si_se_activa_y_se_asigna(make_ctx):
+    sec = [S("m", "drop", 16, suma=["kick", "stab"],
+             ocasionales=[{"rol": "vox_acid", "fraseo": "ultimos_8_de_16"}])]
+    roles = ["kick", "stab", "vox_acid"]
+    ctx = _con_par(make_ctx(sec, roles=roles, reglas_experimentales=True), "stab")
     p = rules.presencia(ctx)
     assert p["vox_acid"] == [(B(9), B(17))]
     # el stab suena en 1-8 y, en 9-16, solo donde la voz calla (11-12 y 15-16)
@@ -345,12 +355,15 @@ def test_la_escalera_se_calcula_sobre_la_presencia_base(ctx_t02):
 
 # --- huecos de seccion nivel 32 -------------------------------------------------------------
 
-def test_en_el_limite_de_32_se_silencian_rumble_y_bajo(ctx_t02):
+def test_rumble_y_bajo_caen_solo_en_el_compas_64_que_entra_al_main(ctx_t02):
     p = rules.presencia(ctx_t02)
-    for rol in ("rumble", "bass"):
-        assert not any(a < B(65) and b > B(64) for a, b in p[rol]), rol    # compas 64 sin rumble ni bajo
-    assert not any(a < B(33) and b > B(32) for a, b in p["rumble"])       # ni el 32 (entra groove_1)
-    assert any(a < B(31) and b >= B(32) for a, b in p["rumble"])           # y el 31 suena
+    en = lambda rol, bar: any(a <= B(bar) and B(bar + 1) <= b for a, b in p[rol])  # noqa: E731
+    assert not en("rumble", 64) and not en("bass", 64)
+    # en los otros fines de 32 solo cae el kick: rumble y bajo se quedan
+    assert en("rumble", 32) and en("rumble", 160) and en("bass", 160)
+    assert en("rumble", 63) and en("bass", 63)
+    k = kick_notes(rules.generar_timeline(ctx_t02))
+    assert 32 not in k and 64 not in k and 160 not in k       # y el kick si cae en todos
 
 
 # --- movimiento -----------------------------------------------------------------------------

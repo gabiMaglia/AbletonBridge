@@ -16,7 +16,7 @@
 
 perfil:
   id: techno-peak-time
-  version: 0.2.0
+  version: 0.3.0
   fecha: 2026-11-22
   beatport: "Techno (Peak Time / Driving)"
   sellos_referencia: [Drumcode, KNTXT, Filth on Acid]
@@ -144,7 +144,7 @@ elementos:
     pista: VOX ANGEL
     warp: complex_pro
     nivel_db: -14
-    envios: {delay: -8, hall: -12}
+    envios: {hall: -12}      # el delay entra por throws grabados (reglas.delay_throws_voces)
     fuente: [T02]
     confianza: media
   choir:
@@ -294,6 +294,8 @@ reglas:
       16: [3, 4]
       32: [1, 2, 3, 4]
     silencian_en_limite_de_seccion_nivel_32: [rumble, bass]
+    # Gabriel: rumble y bajo caen SOLO en el fin de 32 que entra al Main; en los demas cae solo el kick
+    solo_al_entrar_a: primer_drop
     sin_huecos_en_el_ultimo_compas_del_tema: true
     fuente: [S9, T6, T22, T02 capa 4]
     confianza: media
@@ -327,11 +329,15 @@ reglas:
     fuente: [T1, T6]
     confianza: media
   llamado_respuesta:
-    descripcion: "La voz llama, el stab responde: alternan de a 2 compases dentro de la frase"
+    descripcion: >
+      La voz llama y otro rol responde: alternan de a 2 compases dentro de la frase. Gabriel RECHAZO
+      aplicarlo al stab: queda disponible pero desactivado y sin instrumento asignado (`responde: null`).
+    experimental: true
+    activa_por_defecto: false
     pares:
-      - {llama: vox_acid, responde: stab, unidad_compases: 2}
+      - {llama: vox_acid, responde: null, unidad_compases: 2}
     criterio_gabriel: true
-    fuente: [F4 criterios de Gabriel, T23, T24]
+    fuente: [F4 criterios de Gabriel, T23, T24, respuesta de Gabriel (rechazo en el stab)]
     confianza: alta
   escalera_filtro:
     descripcion: "Cada frase de 8 llega mas lejos que la anterior (diente de sierra por frase)"
@@ -374,7 +380,9 @@ reglas:
     confianza: alta
   entrada_filtrada:
     descripcion: "Un elemento nuevo entra con el filtro cerrado y abre en 8 compases (F4 §4)"
-    roles: [atmo]
+    # elementos que entran como nuevos: primera aparicion + entradas del puente. No entran los que
+    # ya traen su propia lane de filtro (stab, lead) ni el que culmina el riser (entra de golpe).
+    roles: [rumble, bass, drums, top, clap, atmo, atmo_trippy, pad, choir, vox_acid, vox_angel]
     dispositivo: "Auto Filter"
     parametro: "Frequency"
     compases: 8
@@ -384,6 +392,25 @@ reglas:
     propuesta: true
     fuente: [T10]
     confianza: baja
+  variedad_fx:
+    descripcion: "Los roles de FX aceptan varios archivos y rotan de forma determinista, sin repetir seguido"
+    roles: [reverse, impacto, roll, roll_32, crash, riser_largo, riser_corto, sweep_up, sweep_down]
+    criterio_gabriel: true
+    fuente: [respuesta de Gabriel (FX variados por transicion)]
+    confianza: alta
+  delay_throws_voces:
+    descripcion: >
+      Eco de delay en el ultimo medio compas de cada frase de voz: el send al retorno Delay sube
+      y baja como lane grabada (T26: send arriba una repeticion). El send estatico queda apagado.
+    roles: [vox_acid, vox_angel]
+    retorno: delay
+    frase_compases: 4
+    ventana_beats: 2
+    envio_off_db: -60
+    envio_pico_db: -8        # el mismo nivel del send estatico que Gabriel oyo en T02
+    criterio_gabriel: true
+    fuente: [T02 bitacora, T26, respuesta de Gabriel (ecos de delay en voces)]
+    confianza: alta
   movimiento_pan:
     descripcion: "Paneo que alterna cada N compases; ATMO y ATMO TRIPPY en fase opuesta (dialogo)"
     items:
@@ -454,15 +481,175 @@ mezcla:
     fuente_track: kick
     destinos: [rumble, bass]
     dispositivo: "Compressor"
-  mono_bajo_hz: 100
+    # valores de T02 + release del rumble corregido (F4 sec.3: 150-300 ms); thresholds a calibrar por reduccion
+    por_destino:
+      rumble:
+        params: {Threshold: -32, Ratio: 4, Attack: 1, Release: 200}
+        items: {"Auto Release On/Off": "Off"}
+      bass:
+        params: {Threshold: -32, Ratio: 4, Attack: 1, Release: 90}
+        items: {"Auto Release On/Off": "Off"}
+  mono_bajo_hz: 120          # T02 aplico 120 Hz (M1); S23/M27 dan 100 Hz
   headroom_pre_master_dbfs: -6
   nivel_utility_fades: "Output"     # D-15: NUNCA automatizar volume; solo este parametro
+  # Plantilla de mezcla por rol (F4 "Estandares de mezcla y master", sec. 2, 3 y 6 + T02). Cadena:
+  # EQ Eight -> Auto Filter -> dinamica -> saturacion -> Utility ultimo (D-15). Todos los HP son de 12 dB/oct
+  # (EQ Eight solo ofrece 12 y 48; las fuentes usan 12-24). Los thresholds se calibran por reduccion, no por numero.
+  plantilla:
+    kick:
+      fuente: [S21, M9, M10, S5]
+      confianza: media
+      eq:
+        - {banda: 1, tipo: "High Pass 12dB", hz: 25}
+        - {banda: 2, tipo: "Bell", hz: 62, gain_db: 2}
+        - {banda: 3, tipo: "Bell", hz: 250, gain_db: -2}
+        - {banda: 4, tipo: "Bell", hz: 3500, gain_db: 2}
+      dinamica:
+        dispositivo: "Drum Buss"
+        params: {Drive: 17, Boom Amt: 45, Boom Freq: 55, Output: -3}   # S5; M28 sugiere afinar el boom a la tonica
+      utility: {items: {Bass Mono: "On"}, params: {Bass Freq: 120}}
+    rumble:
+      fuente: [M29, S8, T02 mix_fix]
+      confianza: media
+      eq:
+        - {banda: 1, tipo: "High Pass 12dB", hz: 35}
+        - {banda: 2, tipo: "Low Pass 48dB", hz: 250}
+      utility: {items: {Bass Mono: "On"}, params: {Bass Freq: 120}}
+    bass:
+      fuente: [M1, S7, T02 mix_fix]
+      confianza: media
+      eq:
+        - {banda: 1, tipo: "High Pass 12dB", hz: 30}
+        - {banda: 2, tipo: "Bell", hz: 200, gain_db: -2}
+      saturacion:
+        dispositivo: "Saturator"
+        items: {Post Clip Mode: "Soft Clip"}
+        params: {Drive: 2}     # M1: soft clip 5-15 %; el Drive de Live es en dB, equivalencia NO VERIFICADA (propuesta)
+      utility: {items: {Bass Mono: "On"}, params: {Bass Freq: 120}}
+    drums:
+      fuente: [M6, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 160}]
+    top:
+      fuente: [M12, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 220}]
+    clap:
+      fuente: [T02 mix_base, F4 mezcla §6]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 200}]
+    stab:
+      fuente: [M13, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 180}]
+    atmo:
+      fuente: [M13, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 250}]
+    atmo_trippy:
+      fuente: [M13, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 250}]
+    lead:
+      fuente: [M13, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 180}]
+    choir:
+      fuente: [M13, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 220}]
+    pad:
+      fuente: [M13, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 250}]
+    snare_fill:
+      fuente: [T02 mix_base, F4 mezcla §6]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 180}]
+    roll:
+      fuente: [T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 180}]
+    roll_32:
+      fuente: [T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 180}]
+    crash:
+      fuente: [M30, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 300}]
+    impacto:
+      fuente: [S1, T02 mix_base]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 120}]
+    reverse:
+      fuente: [T02 mix_base (FX)]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 200}]
+    sweep_up:
+      fuente: [T02 mix_base (FX)]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 200}]
+    sweep_down:
+      fuente: [T02 mix_base (FX)]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 200}]
+    riser_largo:
+      fuente: [T02 mix_base (FX)]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 200}]
+    riser_corto:
+      fuente: [T02 mix_base (FX)]
+      confianza: media
+      eq: [{banda: 1, tipo: "High Pass 12dB", hz: 200}]
+    vox_acid:
+      fuente: [T02 mix_fix, M15b, propuesta]
+      confianza: baja
+      propuesta: true     # presencia, aire y compresor NO tienen fuente en F4 (sec. 6 "Voces": NO VERIFICADO); los decide el oido
+      eq:
+        - {banda: 1, tipo: "High Pass 12dB", hz: 110}   # HP: T02 mix_fix (fuentes generales 80-100 Hz, M15b)
+        - {banda: 2, tipo: "Bell", hz: 3500, gain_db: 1.5}
+        - {banda: 3, tipo: "High Shelf", hz: 10000, gain_db: 1.5}
+      dinamica:
+        dispositivo: "Compressor"
+        params: {Threshold: -18, Ratio: 3, Attack: 10, Release: 120}
+        items: {Auto Release On/Off: "Off"}
+    vox_angel:
+      fuente: [T02 mix_fix, M15b, propuesta]
+      confianza: baja
+      propuesta: true     # presencia, aire y compresor NO tienen fuente en F4 (sec. 6 "Voces": NO VERIFICADO); los decide el oido
+      eq:
+        - {banda: 1, tipo: "High Pass 12dB", hz: 100}   # HP: T02 mix_fix (fuentes generales 80-100 Hz, M15b)
+        - {banda: 2, tipo: "Bell", hz: 3500, gain_db: 1.5}
+        - {banda: 3, tipo: "High Shelf", hz: 10000, gain_db: 1.5}
+      dinamica:
+        dispositivo: "Compressor"
+        params: {Threshold: -18, Ratio: 3, Attack: 10, Release: 120}
+        items: {Auto Release On/Off: "Off"}
+  # Plugins de terceros que usa Gabriel (A-02): opcionales, los nativos siguen siendo el default.
+  # Se activan por nombre en Contexto.plugins; el ejecutor inserta el plugin por nombre y avisa que sus
+  # valores se ajustan a mano (los parametros de un VST no se conocen).
+  plugins:
+    usar_por_defecto: false
+    catalogo:
+      "FabFilter Pro-Q 3": {reemplaza: "EQ Eight", roles: ["*"]}
+      "Maag EQ4": {reemplaza: "EQ Eight", roles: [vox_acid, vox_angel, choir]}
+      "Butch Vig Vocals": {reemplaza: "Compressor", roles: [vox_acid, vox_angel, choir]}
+      "Waves H-Comp": {reemplaza: "Glue Compressor", roles: [master]}
+    fuente: [respuesta de Gabriel A-02]
   fuente: [S3, S23, S36, T02, D-15]
   confianza: media
 
 master:
   club: {lufs_integrado: [-9.9, -7.6], tipico: -8.6, lufs_short_drop: -6, true_peak_dbtp: -1.0}
   cadena: [eq, glue_2a1_30ms_1a2db, saturacion_opcional, limitador]
+  plantilla:
+    - dispositivo: "Glue Compressor"
+      params: {Threshold: -8}      # calibrar por reduccion (1-2 dB en el drop)
+      a_mano: ["Attack: 30 ms", "Ratio: 2:1", "Release: 0.8 s o Auto"]     # F4 mezcla sec. 5; items sin catalogo
+    - dispositivo: "Limiter"
+      params: {Ceiling: -1}
+      a_mano: ["Modo del techo: True Peak"]
   fuente: [S13, S24, S27]
   confianza: media
 

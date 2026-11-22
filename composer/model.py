@@ -14,9 +14,11 @@ CLIP_ONESHOT = "clip_oneshot"
 MIDI = "midi"
 LOCATOR = "locator"
 AUTOMATIZACION = "automatizacion"
+# Informativa: deja escrita en el plan una decision de arreglo (el ejecutor no la toca)
+DECISION = "decision"
 
 TIPOS = (RETORNO, PISTA, DISPOSITIVO, MEZCLA, SIDECHAIN, CLIP_LOOP, CLIP_ONESHOT, MIDI, LOCATOR,
-         AUTOMATIZACION)
+         AUTOMATIZACION, DECISION)
 
 Run = Tuple[float, float]  # [inicio, fin) en beats
 
@@ -31,6 +33,7 @@ class Elemento:
     warp: Optional[str] = None
     pitch: int = 0
     natural_beats: Optional[float] = None  # largo medido de un one-shot, si se conoce
+    alternativas: Tuple[str, ...] = ()     # otros archivos del mismo rol: las reglas los rotan
 
 
 def _validar_objetivo_d15(objetivo: Any) -> None:

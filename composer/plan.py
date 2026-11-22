@@ -4,8 +4,8 @@ from collections import Counter, OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from .model import (AUTOMATIZACION, CLIP_LOOP, CLIP_ONESHOT, DISPOSITIVO, LOCATOR, MEZCLA, MIDI, PISTA,
-                    RETORNO, SIDECHAIN, Accion)
+from .model import (AUTOMATIZACION, CLIP_LOOP, CLIP_ONESHOT, DECISION, DISPOSITIVO, LOCATOR, MEZCLA, MIDI,
+                    PISTA, RETORNO, SIDECHAIN, Accion)
 from .rules import Contexto, generar_timeline
 
 HOLD = 0.01  # beats: punto de sostenido antes de que arranque una lane fusionada
@@ -27,13 +27,17 @@ def crear_plan(ctx: Contexto, nombre: str, plantilla: Optional[str] = None) -> P
     p = ctx.perfil
     return Plan(
         meta={"nombre": nombre, "perfil": p.id, "perfil_version": p.version, "plantilla": plantilla,
-              "tempo": ctx.tempo, "total_compases": ctx.estructura.total_compases},
+              "tempo": ctx.tempo, "total_compases": ctx.estructura.total_compases,
+              # reglas marcadas `experimental` en el perfil y si quedaron activas en este plan
+              "experimentales": {n: bool(ctx.reglas_experimentales or r.get("activa_por_defecto", False))
+                                 for n, r in p.datos["reglas"].items() if r.get("experimental")},
+              "plugins": list(ctx.plugins)},
         secciones=[{"id": s.id, "tipo": s.tipo, "inicio": s.inicio, "compases": s.compases,
                     "suma": [_nombre(i) for i in s.spec.get("suma", [])],
                     "quita": [_nombre(i) for i in s.spec.get("quita", [])],
                     "solo": s.spec.get("solo")} for s in ctx.estructura.secciones],
         elementos={r: {"ruta": e.ruta, "warp": e.warp or p.rol(r).get("warp"), "pitch": e.pitch,
-                       "natural_beats": e.natural_beats} for r, e in ctx.elementos.items()},
+                       "natural_beats": e.natural_beats, "alternativas": list(e.alternativas)} for r, e in ctx.elementos.items()},
         acciones=tl.acciones,
     )
 
@@ -116,10 +120,23 @@ def _rangos(runs: List[Any]) -> str:
     return ", ".join("%s-%s" % (_pos(a), _pos(b)) for a, b in runs)
 
 
-def _destino(obj: Any) -> str:
+def _destino(obj: Any, retornos: Optional[List[str]] = None) -> str:
+    if isinstance(obj, dict) and "send" in obj:
+        pos = obj["send"]
+        return "send %s" % (retornos[pos] if retornos and pos < len(retornos) else pos)
     if isinstance(obj, dict):
         return "%s / %s" % (obj["device"], obj["param"])
     return str(obj)
+
+
+def _detalle_dispositivo(d: Dict[str, Any]) -> str:
+    partes = []
+    for clave in ("params", "items"):
+        if d.get(clave):
+            partes.append(", ".join("%s=%s" % kv for kv in d[clave].items()))
+    if d.get("equivale"):
+        partes.append("equivale a %s" % d["equivale"])
+    return "; ".join(partes) or "-"
 
 
 def _resumen_valores(pts: List[List[Any]]) -> str:
@@ -172,7 +189,24 @@ def plan_a_markdown(plan: Plan) -> str:
         extra = "último en la cadena (D-15)" if d.get("ultimo") else d.get("nota", "")
         if a.tipo == SIDECHAIN:
             extra = "sidechain desde %s" % d["fuente"]
-        L.append("| %s | %s | %s | %s |" % (nombre, a.rol or "master", d.get("params", "-"), extra))
+        if d.get("plugin"):
+            extra = "plugin de terceros (reemplaza %s): valores a mano" % d["reemplaza"]
+        if d.get("a_mano"):
+            extra = "a mano: " + "; ".join(d["a_mano"])
+        L.append("| %s | %s | %s | %s |" % (nombre, a.rol or "master", _detalle_dispositivo(d), extra))
+    L.append("")
+
+    L.append("## Decisiones de arreglo")
+    L.append("")
+    L.append("| Compás | Regla | Qué |")
+    L.append("|--------|-------|-----|")
+    for a in sorted(plan.de_tipo(DECISION), key=lambda x: x.inicio):
+        L.append("| %s | %s | %s |" % (_pos(a.inicio), a.regla, a.datos["que"]))
+    L.append("")
+    for nombre, activa in m.get("experimentales", {}).items():
+        L.append("Regla experimental `%s`: %s." % (nombre, "ACTIVA" if activa else "desactivada (sin instrumento asignado)"))
+    if m.get("plugins"):
+        L.append("Plugins de terceros pedidos: %s." % ", ".join(m["plugins"]))
     L.append("")
 
     L.append("## Capas (clips de loop)")
@@ -217,7 +251,7 @@ def plan_a_markdown(plan: Plan) -> str:
     L.append("| Rol | Destino | Compases | Puntos | Valores | Regla |")
     L.append("|-----|---------|----------|--------|---------|-------|")
     for a in lanes:
-        L.append("| %s | %s | %s-%s | %d | %s | %s |" % (a.rol, _destino(a.datos["objetivo"]), _pos(a.inicio),
+        L.append("| %s | %s | %s-%s | %d | %s | %s |" % (a.rol, _destino(a.datos["objetivo"], retornos), _pos(a.inicio),
                                                           _pos(a.fin), len(a.datos["puntos"]),
                                                           _resumen_valores(a.datos["puntos"]), a.regla))
     L.append("")

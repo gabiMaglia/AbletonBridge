@@ -2,10 +2,14 @@
  "meta": {
   "nombre": "T03",
   "perfil": "techno-peak-time",
-  "perfil_version": "0.2.0",
+  "perfil_version": "0.3.0",
   "plantilla": "t02_like",
   "tempo": 134.0,
-  "total_compases": 192
+  "total_compases": 192,
+  "experimentales": {
+   "llamado_respuesta": false
+  },
+  "plugins": []
  },
  "secciones": [
   {
@@ -145,145 +149,195 @@
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\drums\\kick\\ZEN_PDT_kick_one_shot_nuar_G.wav",
    "warp": null,
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "rumble": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\rumble_loops\\ZEN_PDT_134_rumble_loop_nuar_F.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "bass": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\bass_synth_loops\\ZEN_PDT_134_bass_synth_loop_nuar_F.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "drums": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\drum_loops\\drum_loops_no_kick\\ZEN_PDT_134_drum_loop_no_kick_nuar_F.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "top": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\drum_loops\\drum_top_loops\\ZEN_PDT_134_drum_top_loop_nuar_F.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "clap": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\perc_loops\\ZEN_PDT_134_perc_clap_loop_nuar_F.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "stab": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\stab_synth_loops\\ZEN_PDT_134_stab_synth_loop_nuar_F.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "atmo": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\atmo_loops\\ZEN_PDT_134_atmo_loop_nuar_F.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "lead": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\loops\\lead_synth_loops\\ZEN_PDT_135_lead_synth_loop_hope_F.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "vox_acid": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\Loops\\Vocals\\Female_Vocals\\AU_PTT_130_vocal_loop_female_acid.wav",
    "warp": "complex_pro",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "vox_angel": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\Loops\\Vocals\\Female_Vocals\\AU_PTT_130_vocal_loop_female_angel_Dm.wav",
    "warp": "complex_pro",
    "pitch": 3,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "choir": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\Loops\\Vocals\\Choirs\\AU_PTT_130_vocal_loop_choir_search_Gm.wav",
    "warp": "complex_pro",
    "pitch": -2,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "atmo_trippy": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\Loops\\Atmos_Loops\\AU_PTT_130_atmos_loop_wise_Fmin.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "pad": {
    "ruta": "G:\\LIbrerias\\2026\\Ghosthack - Treptow Techno\\Ghosthack - Treptow Techno\\Loops\\Pad Loops\\Ghosthack-TT_133_F_Pad Loop_006.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "snare_fill": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\Drums\\Snares\\AU_PTT_snare_one_shot_bright.wav",
    "warp": null,
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "roll": {
    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_02.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": [
+    "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_03.wav",
+    "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_04.wav"
+   ]
   },
   "roll_32": {
    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_01.wav",
    "warp": "beats",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": [
+    "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_05.wav"
+   ]
   },
   "crash": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\Drums\\Crash\\AU_PTT_crash_one_shot_moody.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": []
   },
   "impacto": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\perc_fx_one_shots\\ZEN_PDT_perc_fx_one_shot_stadium.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": [
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\perc_fx_one_shots\\ZEN_PDT_perc_fx_one_shot_serious.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\perc_fx_one_shots\\ZEN_PDT_perc_fx_one_shot_ghost.wav"
+   ]
   },
   "reverse": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_intro.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": null
+   "natural_beats": null,
+   "alternativas": [
+    "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_expand.wav",
+    "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_peak.wav",
+    "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_whisper.wav",
+    "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Perc\\AU_PTT_fx_reverse_perc_one_shot_riot.wav"
+   ]
   },
   "sweep_up": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_rope.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": 31.76
+   "natural_beats": 31.76,
+   "alternativas": [
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_connecto.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_hill.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_groot.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_simple.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_stapper.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_twist.wav"
+   ]
   },
   "sweep_down": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_black.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": 15.88
+   "natural_beats": 15.88,
+   "alternativas": [
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_candy.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_carousel.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_tooth.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_tortuga.wav",
+    "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_wheel.wav"
+   ]
   },
   "riser_largo": {
    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_excite.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": 47.56
+   "natural_beats": 47.56,
+   "alternativas": []
   },
   "riser_corto": {
    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Riser\\AU_PTT_fx_riser_one_shot_basic.wav",
    "warp": "complex",
    "pitch": 0,
-   "natural_beats": 10.318000000000001
+   "natural_beats": 10.318000000000001,
+   "alternativas": []
   }
  },
  "acciones": [
@@ -633,7 +687,27 @@
    "inicio": 0.0,
    "fin": null,
    "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 250
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "atmo",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
     "nombre": "Auto Filter",
+    "orden": 20,
     "params": {
      "Resonance": 29,
      "Drive": 14
@@ -649,7 +723,27 @@
    "inicio": 0.0,
    "fin": null,
    "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 250
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "atmo_trippy",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
     "nombre": "Auto Filter",
+    "orden": 20,
     "params": {
      "Resonance": 29,
      "Drive": 14
@@ -669,7 +763,101 @@
     "ultimo": true
    },
    "regla": "setup",
-   "por_que": "D-15: el nivel se automatiza en un Utility al final de la cadena"
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "bass",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 30,
+     "2 Frequency A": 200,
+     "2 Gain A": -2
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB",
+     "2 Filter On A": "On",
+     "2 Filter Type A": "Bell"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "bass",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Saturator",
+    "orden": 40,
+    "params": {
+     "Drive": 2
+    },
+    "items": {
+     "Post Clip Mode": "Soft Clip"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "bass",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Auto Filter",
+    "orden": 20,
+    "params": {
+     "Resonance": 20,
+     "Drive": 10
+    }
+   },
+   "regla": "setup",
+   "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "bass",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Utility",
+    "ultimo": true,
+    "params": {
+     "Bass Freq": 120
+    },
+    "items": {
+     "Bass Mono": "On"
+    }
+   },
+   "regla": "setup",
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "choir",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 220
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
   },
   {
    "tipo": "dispositivo",
@@ -678,6 +866,7 @@
    "fin": null,
    "datos": {
     "nombre": "Auto Filter",
+    "orden": 20,
     "params": {
      "Resonance": 29,
      "Drive": 14
@@ -697,7 +886,115 @@
     "ultimo": true
    },
    "regla": "setup",
-   "por_que": "D-15: el nivel se automatiza en un Utility al final de la cadena"
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "clap",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 200
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "clap",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Auto Filter",
+    "orden": 20,
+    "params": {
+     "Resonance": 20,
+     "Drive": 10
+    }
+   },
+   "regla": "setup",
+   "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "crash",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 300
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "drums",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 160
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "drums",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Auto Filter",
+    "orden": 20,
+    "params": {
+     "Resonance": 20,
+     "Drive": 10
+    }
+   },
+   "regla": "setup",
+   "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "impacto",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 120
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
   },
   {
    "tipo": "dispositivo",
@@ -706,10 +1003,97 @@
    "fin": null,
    "datos": {
     "nombre": "Simpler",
-    "cargar_muestra": true
+    "cargar_muestra": true,
+    "orden": 0
    },
    "regla": "setup",
    "por_que": "Simpler one-shot para el rol MIDI"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "kick",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 25,
+     "2 Frequency A": 62,
+     "2 Gain A": 2,
+     "3 Frequency A": 250,
+     "3 Gain A": -2,
+     "4 Frequency A": 3500,
+     "4 Gain A": 2
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB",
+     "2 Filter On A": "On",
+     "2 Filter Type A": "Bell",
+     "3 Filter On A": "On",
+     "3 Filter Type A": "Bell",
+     "4 Filter On A": "On",
+     "4 Filter Type A": "Bell"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "kick",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Drum Buss",
+    "orden": 30,
+    "params": {
+     "Drive": 17,
+     "Boom Amt": 45,
+     "Boom Freq": 55,
+     "Output": -3
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "kick",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Utility",
+    "ultimo": true,
+    "params": {
+     "Bass Freq": 120
+    },
+    "items": {
+     "Bass Mono": "On"
+    }
+   },
+   "regla": "setup",
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "lead",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 180
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
   },
   {
    "tipo": "dispositivo",
@@ -718,6 +1102,7 @@
    "fin": null,
    "datos": {
     "nombre": "Auto Filter",
+    "orden": 20,
     "params": {
      "Resonance": 20,
      "Drive": 14
@@ -733,10 +1118,68 @@
    "fin": null,
    "datos": {
     "nombre": "Auto Filter",
+    "orden": 20,
     "nota": "HP en el master"
    },
    "regla": "setup",
    "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "master",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Glue Compressor",
+    "orden": 33,
+    "params": {
+     "Threshold": -8
+    },
+    "a_mano": [
+     "Attack: 30 ms",
+     "Ratio: 2:1",
+     "Release: 0.8 s o Auto"
+    ]
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "master",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Limiter",
+    "orden": 90,
+    "params": {
+     "Ceiling": -1
+    },
+    "a_mano": [
+     "Modo del techo: True Peak"
+    ]
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "pad",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 250
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
   },
   {
    "tipo": "dispositivo",
@@ -748,7 +1191,101 @@
     "ultimo": true
    },
    "regla": "setup",
-   "por_que": "D-15: el nivel se automatiza en un Utility al final de la cadena"
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "reverse",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 200
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "roll",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 180
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "rumble",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 35,
+     "2 Frequency A": 250
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB",
+     "2 Filter On A": "On",
+     "2 Filter Type A": "Low Pass 48dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "rumble",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Auto Filter",
+    "orden": 20,
+    "params": {
+     "Resonance": 20,
+     "Drive": 10
+    }
+   },
+   "regla": "setup",
+   "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "rumble",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Utility",
+    "ultimo": true,
+    "params": {
+     "Bass Freq": 120
+    },
+    "items": {
+     "Bass Mono": "On"
+    }
+   },
+   "regla": "setup",
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
   },
   {
    "tipo": "dispositivo",
@@ -757,7 +1294,8 @@
    "fin": null,
    "datos": {
     "nombre": "Simpler",
-    "cargar_muestra": true
+    "cargar_muestra": true,
+    "orden": 0
    },
    "regla": "setup",
    "por_que": "Simpler one-shot para el rol MIDI"
@@ -768,7 +1306,27 @@
    "inicio": 0.0,
    "fin": null,
    "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 180
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "snare_fill",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
     "nombre": "Auto Filter",
+    "orden": 20,
     "params": {
      "Resonance": 29,
      "Drive": 14
@@ -784,10 +1342,84 @@
    "inicio": 0.0,
    "fin": null,
    "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 180
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "stab",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
     "nombre": "Auto Filter",
+    "orden": 20,
     "params": {
      "Resonance": 25,
      "Drive": 14
+    }
+   },
+   "regla": "setup",
+   "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "sweep_up",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 200
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "top",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 220
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "top",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Auto Filter",
+    "orden": 20,
+    "params": {
+     "Resonance": 20,
+     "Drive": 10
     }
    },
    "regla": "setup",
@@ -803,7 +1435,135 @@
     "ultimo": true
    },
    "regla": "setup",
-   "por_que": "D-15: el nivel se automatiza en un Utility al final de la cadena"
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "vox_acid",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 110,
+     "2 Frequency A": 3500,
+     "2 Gain A": 1.5,
+     "3 Frequency A": 10000,
+     "3 Gain A": 1.5
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB",
+     "2 Filter On A": "On",
+     "2 Filter Type A": "Bell",
+     "3 Filter On A": "On",
+     "3 Filter Type A": "High Shelf"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "vox_acid",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Compressor",
+    "orden": 32,
+    "params": {
+     "Threshold": -18,
+     "Ratio": 3,
+     "Attack": 10,
+     "Release": 120
+    },
+    "items": {
+     "Auto Release On/Off": "Off"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "vox_acid",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Auto Filter",
+    "orden": 20,
+    "params": {
+     "Resonance": 20,
+     "Drive": 10
+    }
+   },
+   "regla": "setup",
+   "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "vox_angel",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "EQ Eight",
+    "orden": 10,
+    "params": {
+     "1 Frequency A": 100,
+     "2 Frequency A": 3500,
+     "2 Gain A": 1.5,
+     "3 Frequency A": 10000,
+     "3 Gain A": 1.5
+    },
+    "items": {
+     "1 Filter On A": "On",
+     "1 Filter Type A": "High Pass 12dB",
+     "2 Filter On A": "On",
+     "2 Filter Type A": "Bell",
+     "3 Filter On A": "On",
+     "3 Filter Type A": "High Shelf"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "vox_angel",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Compressor",
+    "orden": 32,
+    "params": {
+     "Threshold": -18,
+     "Ratio": 3,
+     "Attack": 10,
+     "Release": 120
+    },
+    "items": {
+     "Auto Release On/Off": "Off"
+    }
+   },
+   "regla": "setup",
+   "por_que": "cadena de mezcla del rol (F4 sec. 6)"
+  },
+  {
+   "tipo": "dispositivo",
+   "rol": "vox_angel",
+   "inicio": 0.0,
+   "fin": null,
+   "datos": {
+    "nombre": "Auto Filter",
+    "orden": 20,
+    "params": {
+     "Resonance": 20,
+     "Drive": 10
+    }
+   },
+   "regla": "setup",
+   "por_que": "Auto Filter con la receta de resonancia/drive (valores fijos)"
   },
   {
    "tipo": "dispositivo",
@@ -815,7 +1575,7 @@
     "ultimo": true
    },
    "regla": "setup",
-   "por_que": "D-15: el nivel se automatiza en un Utility al final de la cadena"
+   "por_que": "D-15: Utility al final de la cadena (nivel de las lanes y/o Bass Mono)"
   },
   {
    "tipo": "mezcla",
@@ -1072,7 +1832,6 @@
    "datos": {
     "volumen_db": -14,
     "envios": {
-     "1": -8,
      "2": -12
     }
    },
@@ -1086,7 +1845,17 @@
    "fin": null,
    "datos": {
     "fuente": "KICK",
-    "dispositivo": "Compressor"
+    "dispositivo": "Compressor",
+    "orden": 32,
+    "params": {
+     "Threshold": -32,
+     "Ratio": 4,
+     "Attack": 1,
+     "Release": 90
+    },
+    "items": {
+     "Auto Release On/Off": "Off"
+    }
    },
    "regla": "setup",
    "por_que": "rumble y bajo bombean con el kick"
@@ -1098,7 +1867,17 @@
    "fin": null,
    "datos": {
     "fuente": "KICK",
-    "dispositivo": "Compressor"
+    "dispositivo": "Compressor",
+    "orden": 32,
+    "params": {
+     "Threshold": -32,
+     "Ratio": 4,
+     "Attack": 1,
+     "Release": 200
+    },
+    "items": {
+     "Auto Release On/Off": "Off"
+    }
    },
    "regla": "setup",
    "por_que": "rumble y bajo bombean con el kick"
@@ -1122,10 +1901,11 @@
    "fin": 64.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_02.wav"
    },
    "regla": "fills.roll_fin_de_16",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 16"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 16 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
@@ -1143,7 +1923,7 @@
    "tipo": "clip_loop",
    "rol": "rumble",
    "inicio": 64.0,
-   "fin": 124.0,
+   "fin": 252.0,
    "datos": {
     "warp": "complex",
     "pitch": 0
@@ -1170,10 +1950,11 @@
    "fin": 128.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_01.wav"
    },
    "regla": "fills.roll_fin_de_32",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 32"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 32 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
@@ -1182,18 +1963,6 @@
    "fin": 252.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "rumble",
-   "inicio": 128.0,
-   "fin": 252.0,
-   "datos": {
-    "warp": "complex",
     "pitch": 0
    },
    "regla": "presencia",
@@ -1218,10 +1987,11 @@
    "fin": 192.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_03.wav"
    },
    "regla": "fills.roll_fin_de_16",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 16"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 16 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
@@ -1239,7 +2009,7 @@
    "tipo": "clip_loop",
    "rol": "stab",
    "inicio": 192.0,
-   "fin": 224.0,
+   "fin": 254.0,
    "datos": {
     "warp": "beats",
     "pitch": 0
@@ -1261,45 +2031,22 @@
   },
   {
    "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 232.0,
-   "fin": 240.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 248.0,
-   "fin": 254.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
    "rol": "roll_32",
    "inicio": 252.0,
    "fin": 256.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_05.wav"
    },
    "regla": "fills.roll_fin_de_32",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 32"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 32 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
    "rol": "bass",
    "inicio": 256.0,
-   "fin": 380.0,
+   "fin": 384.0,
    "datos": {
     "warp": "beats",
     "pitch": 0
@@ -1335,7 +2082,7 @@
    "tipo": "clip_loop",
    "rol": "rumble",
    "inicio": 256.0,
-   "fin": 380.0,
+   "fin": 384.0,
    "datos": {
     "warp": "complex",
     "pitch": 0
@@ -1347,7 +2094,7 @@
    "tipo": "clip_loop",
    "rol": "stab",
    "inicio": 256.0,
-   "fin": 288.0,
+   "fin": 384.0,
    "datos": {
     "warp": "beats",
     "pitch": 0
@@ -1381,39 +2128,16 @@
   },
   {
    "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 296.0,
-   "fin": 304.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 312.0,
-   "fin": 352.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
    "rol": "roll",
    "inicio": 317.0,
    "fin": 320.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_04.wav"
    },
    "regla": "fills.roll_fin_de_16",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 16"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 16 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
@@ -1429,39 +2153,16 @@
   },
   {
    "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 360.0,
-   "fin": 368.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 376.0,
-   "fin": 384.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
    "rol": "roll_32",
    "inicio": 380.0,
    "fin": 384.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_01.wav"
    },
    "regla": "fills.roll_fin_de_32",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 32"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 32 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
@@ -1539,7 +2240,7 @@
    "tipo": "clip_loop",
    "rol": "bass",
    "inicio": 512.0,
-   "fin": 636.0,
+   "fin": 672.0,
    "datos": {
     "warp": "beats",
     "pitch": 0
@@ -1587,7 +2288,7 @@
    "tipo": "clip_loop",
    "rol": "rumble",
    "inicio": 512.0,
-   "fin": 636.0,
+   "fin": 704.0,
    "datos": {
     "warp": "complex",
     "pitch": 0
@@ -1599,7 +2300,7 @@
    "tipo": "clip_loop",
    "rol": "stab",
    "inicio": 512.0,
-   "fin": 544.0,
+   "fin": 640.0,
    "datos": {
     "warp": "beats",
     "pitch": 0
@@ -1633,39 +2334,16 @@
   },
   {
    "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 552.0,
-   "fin": 560.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 568.0,
-   "fin": 608.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
    "rol": "roll",
    "inicio": 573.0,
    "fin": 576.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_02.wav"
    },
    "regla": "fills.roll_fin_de_16",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 16"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 16 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
@@ -1693,63 +2371,16 @@
   },
   {
    "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 616.0,
-   "fin": 624.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "stab",
-   "inicio": 632.0,
-   "fin": 640.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
    "rol": "roll_32",
    "inicio": 636.0,
    "fin": 640.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_05.wav"
    },
    "regla": "fills.roll_fin_de_32",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 32"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "bass",
-   "inicio": 640.0,
-   "fin": 672.0,
-   "datos": {
-    "warp": "beats",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
-  },
-  {
-   "tipo": "clip_loop",
-   "rol": "rumble",
-   "inicio": 640.0,
-   "fin": 704.0,
-   "datos": {
-    "warp": "complex",
-    "pitch": 0
-   },
-   "regla": "presencia",
-   "por_que": "capa segun la plantilla de la seccion"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 32 (archivo rotado)"
   },
   {
    "tipo": "clip_loop",
@@ -1758,10 +2389,11 @@
    "fin": 704.0,
    "datos": {
     "warp": "beats",
-    "pitch": 0
+    "pitch": 0,
+    "ruta": "G:\\LIbrerias\\2026\\Innovation Sounds - Drumcoding Techno\\Drumcoding Techno\\Samples\\ROLLS E FILLS\\134_drumrolls_03.wav"
    },
    "regla": "fills.roll_fin_de_16",
-   "por_que": "roll de bateria que termina justo en el cambio de frase de 16"
+   "por_que": "roll de bateria que termina justo en el cambio de frase de 16 (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1780,10 +2412,11 @@
    "inicio": 64.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_intro.wav"
    },
    "regla": "transiciones.reverse",
-   "por_que": "reverse que termina justo en el limite de seccion"
+   "por_que": "reverse que termina justo en el limite de seccion (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1802,10 +2435,11 @@
    "inicio": 128.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_expand.wav"
    },
    "regla": "transiciones.reverse",
-   "por_que": "reverse que termina justo en el limite de seccion"
+   "por_que": "reverse que termina justo en el limite de seccion (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1824,10 +2458,11 @@
    "inicio": 192.0,
    "fin": null,
    "datos": {
-    "ancla": "inicio"
+    "ancla": "inicio",
+    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\perc_fx_one_shots\\ZEN_PDT_perc_fx_one_shot_stadium.wav"
    },
    "regla": "transiciones.impacto",
-   "por_que": "impacto en el 1 de la seccion"
+   "por_que": "impacto en el 1 de la seccion (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1846,10 +2481,11 @@
    "inicio": 256.0,
    "fin": null,
    "datos": {
-    "ancla": "inicio"
+    "ancla": "inicio",
+    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_black.wav"
    },
    "regla": "transiciones.downlifter",
-   "por_que": "barrido hacia abajo al entrar el drop"
+   "por_que": "barrido hacia abajo al entrar el drop (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1857,10 +2493,11 @@
    "inicio": 256.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_up_one_shots\\ZEN_PDT_fx_sweep_up_one_shot_rope.wav"
    },
    "regla": "transiciones.riser",
-   "por_que": "riser que culmina justo en el limite"
+   "por_que": "riser que culmina justo en el limite (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1879,10 +2516,11 @@
    "inicio": 320.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_peak.wav"
    },
    "regla": "transiciones.reverse",
-   "por_que": "reverse al cambiar de frase de 16 dentro del drop"
+   "por_que": "reverse al cambiar de frase de 16 dentro del drop (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1901,10 +2539,11 @@
    "inicio": 384.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_whisper.wav"
    },
    "regla": "transiciones.reverse",
-   "por_que": "reverse que termina justo en el limite de seccion"
+   "por_que": "reverse que termina justo en el limite de seccion (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1912,10 +2551,11 @@
    "inicio": 432.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Perc\\AU_PTT_fx_reverse_perc_one_shot_riot.wav"
    },
    "regla": "puente.reverse",
-   "por_que": "un reverse trae la entrada"
+   "por_que": "un reverse trae la entrada (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1923,10 +2563,11 @@
    "inicio": 448.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_intro.wav"
    },
    "regla": "puente.reverse",
-   "por_que": "un reverse trae la entrada"
+   "por_que": "un reverse trae la entrada (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1967,10 +2608,11 @@
    "inicio": 512.0,
    "fin": null,
    "datos": {
-    "ancla": "inicio"
+    "ancla": "inicio",
+    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\perc_fx_one_shots\\ZEN_PDT_perc_fx_one_shot_serious.wav"
    },
    "regla": "transiciones.impacto",
-   "por_que": "impacto en el 1 de la seccion"
+   "por_que": "impacto en el 1 de la seccion (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -1978,10 +2620,11 @@
    "inicio": 512.0,
    "fin": null,
    "datos": {
-    "ancla": "inicio"
+    "ancla": "inicio",
+    "ruta": "G:\\LIbrerias\\2026\\Zenhiser Peaktime - Driving Techno\\Zenhiser Peaktime - Driving Techno\\one_shots\\fx_one_shots\\fx_sweep_down_one_shots\\ZEN_PDT_fx_sweep_down_one_shot_candy.wav"
    },
    "regla": "transiciones.downlifter",
-   "por_que": "barrido hacia abajo al entrar el drop"
+   "por_que": "barrido hacia abajo al entrar el drop (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -2000,10 +2643,11 @@
    "inicio": 576.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_expand.wav"
    },
    "regla": "transiciones.reverse",
-   "por_que": "reverse al cambiar de frase de 16 dentro del drop"
+   "por_que": "reverse al cambiar de frase de 16 dentro del drop (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -2022,10 +2666,11 @@
    "inicio": 640.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_peak.wav"
    },
    "regla": "transiciones.reverse",
-   "por_que": "reverse que termina justo en el limite de seccion"
+   "por_que": "reverse que termina justo en el limite de seccion (archivo rotado)"
   },
   {
    "tipo": "clip_oneshot",
@@ -2044,10 +2689,11 @@
    "inicio": 704.0,
    "fin": null,
    "datos": {
-    "ancla": "fin"
+    "ancla": "fin",
+    "ruta": "G:\\LIbrerias\\2026\\Audentity Records - Peak Time Techno\\Audentity Records - Peak Time Techno\\One_Shots\\FX\\Reverse_Atmos\\AU_PTT_fx_reverse_atmos_one_shot_whisper.wav"
    },
    "regla": "transiciones.reverse",
-   "por_que": "reverse que termina justo en el limite de seccion"
+   "por_que": "reverse que termina justo en el limite de seccion (archivo rotado)"
   },
   {
    "tipo": "midi",
@@ -7251,6 +7897,34 @@
    "tipo": "automatizacion",
    "rol": "top",
    "inicio": 0.0,
+   "fin": 32.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      0.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      32.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "top",
+   "inicio": 0.0,
    "fin": 384.0,
    "datos": {
     "objetivo": "pan",
@@ -7359,6 +8033,209 @@
    },
    "regla": "movimiento_pan",
    "por_que": "paneo que alterna cada 4 compases (dialogo entre capas)"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "clap",
+   "inicio": 64.0,
+   "fin": 96.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      64.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      96.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "rumble",
+   "inicio": 64.0,
+   "fin": 96.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      64.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      96.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "drums",
+   "inicio": 96.0,
+   "fin": 128.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      96.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      128.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "bass",
+   "inicio": 128.0,
+   "fin": 160.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      128.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      160.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_acid",
+   "inicio": 160.0,
+   "fin": 192.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      160.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      192.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_acid",
+   "inicio": 174.0,
+   "fin": 192.0,
+   "datos": {
+    "objetivo": {
+     "send": 1
+    },
+    "puntos": [
+     [
+      174.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      174.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      175.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      176.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      190.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      190.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      191.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      192.0,
+      {
+       "display": -60
+      }
+     ]
+    ]
+   },
+   "regla": "delay_throws_voces",
+   "por_que": "eco de delay en el ultimo medio compas de cada frase de voz"
   },
   {
    "tipo": "automatizacion",
@@ -7500,6 +8377,171 @@
    },
    "regla": "escalera_filtro",
    "por_que": "cada frase de 8 el filtro llega mas lejos (criterio de Gabriel)"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_acid",
+   "inicio": 238.0,
+   "fin": 240.0,
+   "datos": {
+    "objetivo": {
+     "send": 1
+    },
+    "puntos": [
+     [
+      238.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      238.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      239.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      240.0,
+      {
+       "display": -60
+      }
+     ]
+    ]
+   },
+   "regla": "delay_throws_voces",
+   "por_que": "eco de delay en el ultimo medio compas de cada frase de voz"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_acid",
+   "inicio": 302.0,
+   "fin": 320.0,
+   "datos": {
+    "objetivo": {
+     "send": 1
+    },
+    "puntos": [
+     [
+      302.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      302.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      303.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      304.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      318.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      318.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      319.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      320.0,
+      {
+       "display": -60
+      }
+     ]
+    ]
+   },
+   "regla": "delay_throws_voces",
+   "por_que": "eco de delay en el ultimo medio compas de cada frase de voz"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_acid",
+   "inicio": 366.0,
+   "fin": 384.0,
+   "datos": {
+    "objetivo": {
+     "send": 1
+    },
+    "puntos": [
+     [
+      366.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      366.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      367.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      368.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      382.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      382.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      383.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      384.0,
+      {
+       "display": -60
+      }
+     ]
+    ]
+   },
+   "regla": "delay_throws_voces",
+   "por_que": "eco de delay en el ultimo medio compas de cada frase de voz"
   },
   {
    "tipo": "automatizacion",
@@ -7738,6 +8780,34 @@
    "tipo": "automatizacion",
    "rol": "atmo_trippy",
    "inicio": 400.0,
+   "fin": 432.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      400.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      432.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "atmo_trippy",
+   "inicio": 400.0,
    "fin": 508.0,
    "datos": {
     "objetivo": "pan",
@@ -7766,6 +8836,201 @@
    },
    "regla": "movimiento_pan",
    "por_que": "paneo que alterna cada 8 compases (dialogo entre capas)"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "choir",
+   "inicio": 416.0,
+   "fin": 448.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      416.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      448.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_angel",
+   "inicio": 432.0,
+   "fin": 464.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      432.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      464.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_angel",
+   "inicio": 446.0,
+   "fin": 496.0,
+   "datos": {
+    "objetivo": {
+     "send": 1
+    },
+    "puntos": [
+     [
+      446.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      446.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      447.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      448.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      462.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      462.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      463.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      464.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      478.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      478.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      479.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      480.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      494.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      494.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      495.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      496.0,
+      {
+       "display": -60
+      }
+     ]
+    ]
+   },
+   "regla": "delay_throws_voces",
+   "por_que": "eco de delay en el ultimo medio compas de cada frase de voz"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "top",
+   "inicio": 448.0,
+   "fin": 480.0,
+   "datos": {
+    "objetivo": {
+     "device": "Auto Filter",
+     "param": "Frequency"
+    },
+    "puntos": [
+     [
+      448.0,
+      {
+       "display": 300
+      }
+     ],
+     [
+      480.0,
+      {
+       "display": 16000
+      }
+     ]
+    ]
+   },
+   "regla": "entrada_filtrada",
+   "por_que": "elemento nuevo: entra filtrado y abre en 8 compases"
   },
   {
    "tipo": "automatizacion",
@@ -8220,6 +9485,172 @@
    },
    "regla": "movimiento_pan",
    "por_que": "paneo que alterna cada 4 compases (dialogo entre capas)"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_acid",
+   "inicio": 558.0,
+   "fin": 576.0,
+   "datos": {
+    "objetivo": {
+     "send": 1
+    },
+    "puntos": [
+     [
+      558.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      558.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      559.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      560.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      574.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      574.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      575.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      576.0,
+      {
+       "display": -60
+      }
+     ]
+    ]
+   },
+   "regla": "delay_throws_voces",
+   "por_que": "eco de delay en el ultimo medio compas de cada frase de voz"
+  },
+  {
+   "tipo": "automatizacion",
+   "rol": "vox_acid",
+   "inicio": 622.0,
+   "fin": 640.0,
+   "datos": {
+    "objetivo": {
+     "send": 1
+    },
+    "puntos": [
+     [
+      622.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      622.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      623.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      624.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      638.0,
+      {
+       "display": -60
+      }
+     ],
+     [
+      638.25,
+      {
+       "display": -8
+      }
+     ],
+     [
+      639.75,
+      {
+       "display": -8
+      }
+     ],
+     [
+      640.0,
+      {
+       "display": -60
+      }
+     ]
+    ]
+   },
+   "regla": "delay_throws_voces",
+   "por_que": "eco de delay en el ultimo medio compas de cada frase de voz"
+  },
+  {
+   "tipo": "decision",
+   "rol": "",
+   "inicio": 252.0,
+   "fin": 256.0,
+   "datos": {
+    "que": "rumble y bajo caen solo aca (fin de 32 que entra al main); en los demas fines de 32 solo cae el kick",
+    "roles": [
+     "rumble",
+     "bass"
+    ]
+   },
+   "regla": "rumble_y_bajo",
+   "por_que": "Gabriel: solo en el compas que entra al Main"
+  },
+  {
+   "tipo": "decision",
+   "rol": "",
+   "inicio": 254.0,
+   "fin": 256.0,
+   "datos": {
+    "que": "corte de 2 tiempos antes de main: solo queda snare_fill",
+    "conserva": [
+     "snare_fill"
+    ]
+   },
+   "regla": "corte_previo_al_drop",
+   "por_que": "anacrusa antes del drop (Gabriel: si)"
+  },
+  {
+   "tipo": "decision",
+   "rol": "",
+   "inicio": 764.0,
+   "fin": 768.0,
+   "datos": {
+    "que": "ultimo compas: kick entero, sin hueco ni fills"
+   },
+   "regla": "ultimo_compas",
+   "por_que": "salida limpia para el DJ (Gabriel)"
   }
  ]
 }

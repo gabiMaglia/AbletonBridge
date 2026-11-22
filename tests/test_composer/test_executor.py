@@ -190,3 +190,101 @@ def test_sidechain_de_rumble_y_bajo_al_kick(make_ctx):
 def test_plan_con_lane_de_volumen_nunca_llega_al_ejecutor(ctx_t02):
     tl = rules.generar_timeline(ctx_t02)
     assert not [a for a in tl.de_tipo(AUTOMATIZACION) if a.datos["objetivo"] == "volume"]
+
+
+# --- T-015b -----------------------------------------------------------------------------------------
+
+def correr(make_ctx, secciones, roles, **kw):
+    plan = plan_de(make_ctx, secciones, roles)
+    api = FakeApi(**kw)
+    Ejecutor(api, None, sleep=lambda s: None).ejecutar(plan)
+    return api
+
+
+def test_cadena_en_orden_eq_filtro_dinamica_y_utility_al_final(make_ctx):
+    api = correr(make_ctx, [S("a", "intro", 16, suma=["kick", "rumble"])], ["kick", "rumble"])
+    inserts = [k["name"] for k in api.kw("live_device_insert") if k["track"] == 1]     # RUMBLE
+    assert inserts == ["EQ Eight", "Auto Filter", "Compressor"]
+    n = api.names()
+    assert n.index("live_device_insert") < n.index("live_utility_ensure_last")
+
+
+def test_items_cuantizados_se_mandan_como_valor_crudo_por_nombre_exacto(make_ctx):
+    api = correr(make_ctx, [S("a", "intro", 8, suma=["top"])], ["top"])
+    sets = {k["name"]: k for k in api.kw("live_device_set_param")}
+    assert sets["1 Filter Type A"]["value"] == 1 and "display" not in sets["1 Filter Type A"]    # High Pass 12dB
+    assert sets["1 Frequency A"]["display"] == 220
+    assert sets["1 Filter On A"]["value"] == 1
+
+
+def test_sidechain_aplica_los_valores_despues_de_enrutar(make_ctx):
+    api = correr(make_ctx, [S("a", "intro", 16, suma=["kick", "rumble"])], ["kick", "rumble"])
+    n = api.names()
+    i = n.index("live_compressor_set_sidechain")
+    despues = [(nm, k) for nm, k in api.calls[i:] if nm == "live_device_set_param"]
+    rel = [k for _, k in despues if k["name"] == "Release"][0]
+    assert rel["display"] == 200
+    assert [k for _, k in despues if k["name"] == "Auto Release On/Off"][0]["value"] == 0
+
+
+def test_bass_mono_se_setea_en_el_utility_que_devuelve_ensure_last(make_ctx):
+    api = correr(make_ctx, [S("a", "intro", 16, suma=["kick", "rumble"])], ["kick", "rumble"])
+    mono = [k for k in api.kw("live_device_set_param") if k["name"] == "Bass Mono"]
+    assert mono and all(k["device"] == 7 and k["value"] == 1 for k in mono)     # target.device de ensure_last
+    freq = [k for k in api.kw("live_device_set_param") if k["name"] == "Bass Freq"]
+    assert freq and freq[0]["display"] == 120
+
+
+def test_la_ruta_alternativa_del_plan_es_la_que_se_coloca(make_ctx):
+    from tests.test_composer.test_t015b_rules import GROOVES
+    plan = crear_plan(make_ctx(GROOVES, roles=["kick", "reverse"],
+                               alternativas={"reverse": ["C:\\pack\\rev_b.wav"]}), nombre="x")
+    api = FakeApi(natural=6.0)
+    Ejecutor(api, None, sleep=lambda s: None).ejecutar(plan)
+    finales = [k["path"] for k in api.kw("live_clip_place_audio") if k["start_beat"] < 1000 and "rev" in k["path"]]
+    assert finales == ["C:\\pack\\reverse.wav", "C:\\pack\\rev_b.wav"] * 2
+    medidas = [k["path"] for k in api.kw("live_clip_place_audio") if k["start_beat"] > 1000]
+    assert sorted(medidas) == ["C:\\pack\\rev_b.wav", "C:\\pack\\reverse.wav"]          # una medicion por archivo
+
+
+def test_la_lane_de_send_usa_el_indice_real_del_retorno(make_ctx):
+    sec = [S("m", "drop", 16, suma=["kick"], ocasionales=[{"rol": "vox_acid", "fraseo": "ultimos_8_de_16"}])]
+    api = correr(make_ctx, sec, ["kick", "vox_acid"])
+    targets = [ln["target"] for r in api.kw("live_automation_record") for ln in r["lanes"]]
+    assert {"send": 1} in targets                                    # Delay es el 2.o retorno
+
+
+def test_master_inserta_glue_y_limiter_y_avisa_lo_que_va_a_mano(ctx_t02):
+    plan = crear_plan(ctx_t02, nombre="T03")
+    api = FakeApi()
+    informe = Ejecutor(api, None, sleep=lambda s: None).ejecutar(plan)
+    assert [k["name"] for k in api.kw("live_master_device_insert")] == ["Auto Filter", "Glue Compressor", "Limiter"]
+    master = {(k["device"], k["name"]): k["display"] for k in api.kw("live_master_device_set_param")}
+    assert master[("Limiter", "Ceiling")] == -1 and master[("Glue Compressor", "Threshold")] == -8
+    assert any("True Peak" in a for a in informe.advertencias)
+
+
+def test_un_param_que_falla_se_informa_y_sigue(make_ctx):
+    class Rota(FakeApi):
+        def __getattr__(self, name):
+            fn = super().__getattr__(name)
+            if name != "live_device_set_param":
+                return fn
+
+            def malo(client, **kw):
+                raise RuntimeError("no existe %s" % kw["name"])
+            return malo
+
+    plan = plan_de(make_ctx, [S("a", "intro", 8, suma=["top"])], ["top"])
+    informe = Ejecutor(Rota(), None, sleep=lambda s: None).ejecutar(plan)
+    assert any("no existe" in a for a in informe.advertencias)
+
+
+def test_un_plugin_se_inserta_por_nombre_y_se_avisa_que_va_a_mano(ctx_t02):
+    ctx_t02.plugins = ("FabFilter Pro-Q 3",)
+    plan = crear_plan(ctx_t02, nombre="T03")
+    api = FakeApi()
+    informe = Ejecutor(api, None, sleep=lambda s: None).ejecutar(plan)
+    assert "FabFilter Pro-Q 3" in [k["name"] for k in api.kw("live_device_insert")]
+    assert not [k for k in api.kw("live_device_set_param") if k["name"] == "1 Filter Type A"]
+    assert any("FabFilter Pro-Q 3" in a and "a mano" in a for a in informe.advertencias)
