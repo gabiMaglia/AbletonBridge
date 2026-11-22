@@ -57,7 +57,9 @@ class BridgeServer:
         host: str = "127.0.0.1",
         preferred_port: int = DEFAULT_PORT,
         port_range: range = FALLBACK_PORT_RANGE,
+        handlers: Optional[Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]]] = None,
     ) -> None:
+        self._handlers = handlers or {}
         self._dispatcher = dispatcher
         self._live_info_provider = live_info_provider
         self._host = host
@@ -158,8 +160,10 @@ class BridgeServer:
     def _dispatch(self, cmd: str, params: Dict[str, Any]) -> Dict[str, Any]:
         if cmd == "ping":
             return handle_ping(params, self._live_info_provider())
-        # T-003+ registran aca los comandos reales (transport.*, track.*, etc.)
-        # ejecutandolos siempre via self._dispatcher.run_blocking(...).
+        handler = self._handlers.get(cmd)
+        if handler is not None:
+            # El LOM solo se toca en el hilo principal de Live.
+            return self._dispatcher.run_blocking(lambda: handler(params))
         raise _CommandError(errors.UNKNOWN_CMD, f"unknown cmd: {cmd}")
 
 

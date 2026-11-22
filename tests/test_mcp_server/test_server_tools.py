@@ -12,7 +12,7 @@ import threading
 import pytest
 
 from mcp_server.abletonbridge_mcp.client import BridgeClient
-from mcp_server.abletonbridge_mcp.server import live_get_state, live_ping
+from mcp_server.abletonbridge_mcp.server import live_get_state, live_ping, live_probe_api
 
 
 class FakeRemoteScript:
@@ -83,6 +83,15 @@ def make_handler():
                     "tracks": [],
                 },
             }
+        if cmd == "probe.api":
+            return {
+                "id": req["id"],
+                "ok": True,
+                "result": {
+                    "live_version": "12.4.16",
+                    "members": {"Track.create_audio_clip": True, "Clip.crop": False},
+                },
+            }
         return {
             "id": req["id"],
             "ok": False,
@@ -113,3 +122,9 @@ def test_live_get_state_tool_returns_state_snapshot(connected_client) -> None:
     assert result["tempo"] == 120.0
     assert result["is_playing"] is False
     assert result["tracks"] == []
+
+
+def test_live_probe_api_tool_returns_members(connected_client) -> None:
+    result = live_probe_api(connected_client)
+    assert result["live_version"] == "12.4.16"
+    assert result["members"]["Clip.crop"] is False

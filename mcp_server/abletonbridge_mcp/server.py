@@ -29,3 +29,8 @@ def live_get_state(client: BridgeClient, include_clips: bool = True) -> Dict[str
     Params: { include_clips: bool } -- ver engram/04_api_contracts.md SS B F-005.
     """
     return client.send_request("state.get", {"include_clips": include_clips})
+
+
+def live_probe_api(client: BridgeClient) -> Dict[str, Any]:
+    """Diagnostico: que miembros del LOM existen en la version de Live conectada."""
+    return client.send_request("probe.api", {})

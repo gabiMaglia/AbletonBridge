@@ -94,3 +94,39 @@ def test_unknown_cmd_returns_unknown_cmd_error() -> None:
     finally:
         client.close()
         server.stop()
+
+
+def test_registered_handler_runs_via_dispatcher_pump() -> None:
+    import threading
+
+    dispatcher = UIDispatcher()
+    main_thread = threading.get_ident()
+    seen = {}
+
+    def handler(params):
+        seen["thread"] = threading.get_ident()
+        return {"echo": params.get("v")}
+
+    server = BridgeServer(
+        dispatcher=dispatcher,
+        live_info_provider=fake_live_info,
+        preferred_port=0,
+        port_range=range(0, 1),
+        handlers={"custom.echo": handler},
+    )
+    port = server.bind()
+    server.start()
+    client = BridgeClient(host="127.0.0.1", port=port, timeout=2.0)
+    out = {}
+    try:
+        client.connect()
+        t = threading.Thread(target=lambda: out.update(client.send_request("custom.echo", {"v": 7})))
+        t.start()
+        while t.is_alive():
+            dispatcher.pump()
+            t.join(0.02)
+        assert out == {"echo": 7}
+        assert seen["thread"] == main_thread
+    finally:
+        client.close()
+        server.stop()
