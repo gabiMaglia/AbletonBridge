@@ -34,3 +34,26 @@ def live_get_state(client: BridgeClient, include_clips: bool = True) -> Dict[str
 def live_probe_api(client: BridgeClient) -> Dict[str, Any]:
     """Diagnostico: que miembros del LOM existen en la version de Live conectada."""
     return client.send_request("probe.api", {})
+
+
+# --- Spikes temporales T-002c (automatizacion en Arrangement) ---
+
+
+def live_spike_automation_session(client: BridgeClient, bars: int = 4) -> Dict[str, Any]:
+    return client.send_request("spike.automation_session", {"bars": bars})
+
+
+def live_spike_automation_record_start(
+    client: BridgeClient, start_beat: float = 32.0, bars: int = 2
+) -> Dict[str, Any]:
+    return client.send_request(
+        "spike.automation_record_start", {"start_beat": start_beat, "bars": bars}
+    )
+
+
+def live_spike_automation_record_status(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("spike.automation_record_status", {})
+
+
+def live_spike_cleanup(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("spike.cleanup", {})

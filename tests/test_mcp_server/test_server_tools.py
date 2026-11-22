@@ -128,3 +128,26 @@ def test_live_probe_api_tool_returns_members(connected_client) -> None:
     result = live_probe_api(connected_client)
     assert result["live_version"] == "12.4.16"
     assert result["members"]["Clip.crop"] is False
+
+
+def test_spike_tools_send_expected_cmds() -> None:
+    from mcp_server.abletonbridge_mcp import server as s
+
+    sent = []
+
+    class C:
+        def send_request(self, cmd, params):
+            sent.append((cmd, params))
+            return {}
+
+    c = C()
+    s.live_spike_automation_session(c, bars=3)
+    s.live_spike_automation_record_start(c, start_beat=16.0, bars=1)
+    s.live_spike_automation_record_status(c)
+    s.live_spike_cleanup(c)
+    assert sent == [
+        ("spike.automation_session", {"bars": 3}),
+        ("spike.automation_record_start", {"start_beat": 16.0, "bars": 1}),
+        ("spike.automation_record_status", {}),
+        ("spike.cleanup", {}),
+    ]

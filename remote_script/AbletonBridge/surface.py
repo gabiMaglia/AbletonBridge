@@ -7,7 +7,7 @@ drena desde `_tick`.
 """
 from typing import Any, Callable, Dict, List, Optional
 
-from . import handlers
+from . import handlers, spikes
 from .dispatcher import UIDispatcher
 from .server import BridgeServer, DEFAULT_PORT, FALLBACK_PORT_RANGE
 
@@ -45,6 +45,7 @@ class AbletonBridge(_Base):
         super().__init__(c_instance)
         self._running = False
         self.dispatcher = UIDispatcher()
+        self.spikes = spikes.RecordSpike()
         self.server: Optional[BridgeServer] = None
         try:
             import Live  # solo existe dentro de Live
@@ -71,6 +72,10 @@ class AbletonBridge(_Base):
         return {
             "state.get": lambda params: handlers.get_state(self.song(), self._live_info, params),
             "probe.api": lambda params: handlers.probe_api(self._live, self._live_info),
+            "spike.automation_session": lambda p: spikes.automation_session(self.song(), self._live, p),
+            "spike.automation_record_start": lambda p: self.spikes.start(self.song(), self._live, p),
+            "spike.automation_record_status": lambda p: self.spikes.status(self.song()),
+            "spike.cleanup": lambda p: spikes.cleanup(self.song(), self.spikes),
         }
 
     def _tick(self) -> None:
@@ -83,6 +88,10 @@ class AbletonBridge(_Base):
             self.dispatcher.pump()
         except Exception as exc:  # noqa: BLE001
             self.log_message(f"AbletonBridge: tick error: {exc!r}")
+        try:
+            self.spikes.tick()  # aislado: un spike roto no frena el pump
+        except Exception as exc:  # noqa: BLE001
+            self.log_message(f"AbletonBridge: spike tick error: {exc!r}")
         try:
             self.schedule_message(1, self._tick)
         except Exception as exc:  # noqa: BLE001

@@ -110,3 +110,20 @@ def test_uses_framework_base_when_available(monkeypatch) -> None:
     finally:
         monkeypatch.undo()
         importlib.reload(surface)
+
+
+def test_tick_survives_spike_tick_exception(instance) -> None:
+    def boom():
+        raise RuntimeError("spike")
+
+    instance.spikes.tick = boom
+    ran = []
+    instance.dispatcher.submit(lambda: ran.append(1))
+    instance._tick()
+    assert ran == [1] and any("spike" in m for m in instance.logs)
+
+
+def test_spike_handlers_registered(instance) -> None:
+    for cmd in ("spike.automation_session", "spike.automation_record_start",
+                "spike.automation_record_status", "spike.cleanup"):
+        assert cmd in instance.server._handlers
