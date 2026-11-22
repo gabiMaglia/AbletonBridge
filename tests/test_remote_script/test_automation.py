@@ -36,13 +36,21 @@ class Dev:
         self.name, self.parameters = name, params
 
 
+UTIL = {"device": "Utility", "param": "Output"}  # D-15: el nivel se automatiza en un Utility, nunca en el fader
+
+
+def util(track):
+    return track.devices[-1].parameters[0]
+
+
 class Track:
     def __init__(self, name="T", armed=False, can_arm=True):
         self.name, self.arm, self.can_be_armed = name, armed, can_arm
         self.mixer_device = types.SimpleNamespace(
             volume=P("Volume", 0.0, 1.0, 0.5), panning=P("Pan", -1.0, 1.0, 0.0),
             sends=[P("Send A", 0.0, 1.0, 0.0)])
-        self.devices = [Dev("Auto Filter", [P("Frequency", 20.0, 20000.0, 20000.0), P("Resonance", 0.0, 1.0)])]
+        self.devices = [Dev("Auto Filter", [P("Frequency", 20.0, 20000.0, 20000.0), P("Resonance", 0.0, 1.0)]),
+                        Dev("Utility", [P("Output", -1.0, 1.0, 0.5)])]  # Utility al final, como manda D-15
 
 
 class Song:
@@ -83,7 +91,7 @@ class Clock:
         return self.t
 
 
-def lane(track=0, target="volume", points=((8.0, 0.0), (16.0, 1.0))):
+def lane(track=0, target=UTIL, points=((8.0, 0.0), (16.0, 1.0))):
     return {"track": track, "target": target, "points": [list(p) for p in points]}
 
 
@@ -134,6 +142,18 @@ def test_invalid_params_rejected_without_touching_the_set(bad) -> None:
     assert rec.phase == "idle" and song.session_automation_record is False and song.calls == []
 
 
+@pytest.mark.parametrize("track", [0, {"return": 0}, "master"])
+def test_volume_lane_is_forbidden_by_d15_and_points_to_the_helper(track) -> None:
+    song, rec = Song(), automation.AutomationRecorder()
+    with pytest.raises(CommandError) as e:
+        rec.record(song, params(lanes=[lane(track, "volume")]))
+    assert e.value.code == errors.INVALID_PARAMS
+    assert "D-15" in str(e.value) and "utility.ensure_last" in str(e.value) and "Output" in str(e.value)
+    assert rec.phase == "idle" and song.session_automation_record is False and song.calls == []
+    with pytest.raises(CommandError):
+        automation.clear(song, {"track": 0, "target": "volume"})
+
+
 def test_queue_response_and_nothing_applied_until_the_first_tick() -> None:
     song, rec = Song(), automation.AutomationRecorder()
     out = rec.record(song, params())
@@ -165,7 +185,7 @@ def test_display_values_are_resolved_to_raw_once_up_front() -> None:
     song, rec = Song(), automation.AutomationRecorder()
     pts = ((8.0, {"display": 25}), (16.0, {"display": 75}))
     rec.record(song, params(lanes=[lane(points=pts)]))
-    assert rec._lanes[0].points == [(8.0, pytest.approx(0.25, abs=0.01)), (16.0, pytest.approx(0.75, abs=0.01))]
+    assert rec._lanes[0].points == [(8.0, pytest.approx(-0.5, abs=0.01)), (16.0, pytest.approx(0.5, abs=0.01))]
 
 
 # --- setup / punch-in ------------------------------------------------------------
@@ -181,7 +201,7 @@ def test_first_tick_saves_state_arms_automation_and_seeks_to_preroll() -> None:
     assert rec.phase == "seeking"
     assert [t.arm for t in song.tracks] == [False, False, False]
     assert [d["name"] for d in rec.status(song)["disarmed_tracks"]] == ["Kick", "Lead"]
-    assert song.tracks[0].mixer_device.volume.value == 0.0  # valor en start_beat antes de reproducir
+    assert util(song.tracks[0]).value == 0.0  # valor en start_beat antes de reproducir
     assert song.calls == ["start"]  # arranca en cualquier lado; despues salta al preroll
     rec.tick(song)
     assert song.current_song_time == 4.0
@@ -237,7 +257,7 @@ def test_every_tick_writes_the_interpolated_value_only_when_it_changed() -> None
     song, rec = Song(), automation.AutomationRecorder()
     rec.record(song, params())
     to_recording(rec, song)
-    vol = song.tracks[0].mixer_device.volume
+    vol = util(song.tracks[0])
     drive(rec, song, 12.0)
     assert vol.value == pytest.approx(0.5)
     n = len(vol.writes)
@@ -248,14 +268,14 @@ def test_every_tick_writes_the_interpolated_value_only_when_it_changed() -> None
     assert vol.value == pytest.approx(0.75) and len(vol.writes) == n + 1
     lane_status = rec.status(song)["lanes"][0]
     assert lane_status["writes"] >= 2 and lane_status["last_value"] == pytest.approx(0.75)
-    assert lane_status["param_name"] == "Volume" and lane_status["track"] == 0
+    assert lane_status["param_name"] == "Output" and lane_status["track"] == 0
 
 
 def test_punch_in_writes_the_start_value_inside_the_record_window() -> None:
     song, rec = Song(), automation.AutomationRecorder()
     rec.record(song, params())
     to_recording(rec, song)
-    assert song.tracks[0].mixer_device.volume.writes[-1] == 0.0  # forzado al punchear
+    assert util(song.tracks[0]).writes[-1] == 0.0  # forzado al punchear
 
 
 def test_all_target_kinds_are_written() -> None:
@@ -265,8 +285,8 @@ def test_all_target_kinds_are_written() -> None:
         lane(0, {"send": 0}),
         lane(1, {"device": "Auto Filter", "param": "Frequency"}, ((8.0, 20.0), (16.0, 20000.0))),
         lane(0, {"device": 0, "param": "Resonance"}),
-        lane({"return": 0}, "volume"),
-        lane("master", "volume"),
+        lane({"return": 0}, UTIL),
+        lane("master", UTIL),
     ]
     rec.record(song, params(lanes=lanes))
     to_recording(rec, song)
@@ -275,8 +295,8 @@ def test_all_target_kinds_are_written() -> None:
     assert song.tracks[0].mixer_device.sends[0].value == pytest.approx(0.5)
     assert song.tracks[1].devices[0].parameters[0].value == pytest.approx(10010.0)
     assert song.tracks[0].devices[0].parameters[1].value == pytest.approx(0.5)
-    assert song.return_tracks[0].mixer_device.volume.value == pytest.approx(0.5)
-    assert song.master_track.mixer_device.volume.value == pytest.approx(0.5)
+    assert util(song.return_tracks[0]).value == pytest.approx(0.5)
+    assert util(song.master_track).value == pytest.approx(0.5)
 
 
 # --- fin / restore ------------------------------------------------------------------
@@ -302,7 +322,7 @@ def test_end_beat_stops_transport_and_restores_everything() -> None:
     assert [t.arm for t in song.tracks] == [True, False]  # re-armado
     st = rec.status(song)
     assert st["progress"] == 1.0 and st["errors"] == []
-    assert song.tracks[0].mixer_device.volume.value == pytest.approx(1.0)  # valor final escrito
+    assert util(song.tracks[0]).value == pytest.approx(1.0)  # valor final escrito
 
 
 def test_previous_automation_arm_true_is_restored_as_true() -> None:
@@ -377,7 +397,7 @@ def test_timeout_scales_with_the_length_of_the_recording() -> None:
 def test_param_error_during_recording_is_isolated_and_restores() -> None:
     song, rec = finish_setup()
     to_recording(rec, song)
-    song.tracks[0].mixer_device.volume.fail_set = True
+    util(song.tracks[0]).fail_set = True
     drive(rec, song, 12.0)  # no debe propagar
     assert rec.phase == "error" and rec.status(song)["errors"]
     assert song.record_mode is False and song.is_playing is False and song.tracks[0].arm is True
@@ -430,15 +450,15 @@ def test_busy_only_while_a_recording_is_in_flight() -> None:
 
 def test_clear_reports_unsupported_when_the_lom_has_no_api() -> None:
     song = Song()
-    out = automation.clear(song, {"track": 0, "target": "volume"})
-    assert out["supported"] is False and out["cleared"] is False and out["param_name"] == "Volume"
+    out = automation.clear(song, {"track": 0, "target": UTIL})
+    assert out["supported"] is False and out["cleared"] is False and out["param_name"] == "Output"
 
 
 def test_clear_calls_the_lom_when_it_exists() -> None:
     song = Song()
     seen: List[Any] = []
-    song.tracks[0].mixer_device.volume.clear_automation = lambda *a: seen.append(a)
-    out = automation.clear(song, {"track": 0, "target": "volume", "start_beat": 8.0, "end_beat": 16.0})
+    util(song.tracks[0]).clear_automation = lambda *a: seen.append(a)
+    out = automation.clear(song, {"track": 0, "target": UTIL, "start_beat": 8.0, "end_beat": 16.0})
     assert out["supported"] is True and out["cleared"] is True and seen == [(8.0, 16.0)]
 
 
@@ -447,9 +467,9 @@ def test_clear_validates_target_and_range() -> None:
     with pytest.raises(CommandError):
         automation.clear(song, {"track": 0, "target": "nope"})
     with pytest.raises(CommandError):
-        automation.clear(song, {"track": 0, "target": "volume", "start_beat": 8.0})
+        automation.clear(song, {"track": 0, "target": UTIL, "start_beat": 8.0})
     with pytest.raises(CommandError):
-        automation.clear(song, {"track": 0, "target": "volume", "start_beat": 8.0, "end_beat": 4.0})
+        automation.clear(song, {"track": 0, "target": UTIL, "start_beat": 8.0, "end_beat": 4.0})
 
 
 # --- cableado en runtime ---------------------------------------------------------------
@@ -493,7 +513,7 @@ def test_transport_starts_from_seek_position_not_insert_marker():
     song = Song()
     rec = automation.AutomationRecorder(clock=Clock())
     rec.record(song, {"start_beat": 100.0, "end_beat": 108.0, "preroll_beats": 4,
-                      "lanes": [{"track": 0, "target": "volume", "points": [[100.0, 0.2], [108.0, 0.8]]}]})
+                      "lanes": [{"track": 0, "target": UTIL, "points": [[100.0, 0.2], [108.0, 0.8]]}]})
     for _ in range(3):
         rec.tick(song)
     assert rec.phase == "preroll" and song.current_song_time == 96.0

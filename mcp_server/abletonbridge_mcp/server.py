@@ -191,6 +191,13 @@ def live_device_insert(client: BridgeClient, track: int, name: str, index: int =
     return client.send_request("device.insert", {"track": track, "name": name, "index": index})
 
 
+def live_utility_ensure_last(
+    client: BridgeClient, track: Any = None, return_: Optional[int] = None,
+) -> Dict[str, Any]:
+    """D-15: deja un Utility como ultimo device (track: indice | "master" | {"return": i}; o return_)."""
+    return client.send_request("utility.ensure_last", _compact(track=track, **{"return": return_}))
+
+
 def live_device_set_param(
     client: BridgeClient, track: int, device: Any, name: str,
     value: Optional[float] = None, display: Optional[float] = None,

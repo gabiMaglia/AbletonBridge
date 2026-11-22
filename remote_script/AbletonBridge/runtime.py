@@ -117,6 +117,7 @@ class BridgeRuntime:
             "clip.create_midi": lambda p: production.clip_create_midi(song(), self._live, p),
             "device.insert": lambda p: production.device_insert(song(), p),
             "device.set_param": lambda p: production.device_set_param(song(), p),
+            "utility.ensure_last": lambda p: production.utility_ensure_last(song(), p),
             "master.device_insert": lambda p: production.master_device_insert(song(), p),
             "master.device_set_param": lambda p: production.master_device_set_param(song(), p),
             "master.set_mixer": lambda p: production.master_set_mixer(song(), p),

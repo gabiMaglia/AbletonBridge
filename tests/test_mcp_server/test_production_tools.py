@@ -109,3 +109,9 @@ def test_master_and_sidechain_tools() -> None:
     assert sent(s.live_master_set_mixer, volume_db=-1) == ("master.set_mixer", {"volume_db": -1})
     assert sent(s.live_compressor_set_sidechain, 2, "Compressor", "Kick") == (
         "compressor.set_sidechain", {"track": 2, "device": "Compressor", "source_track_name": "Kick"})
+
+
+def test_utility_ensure_last_tool_maps_track_and_return() -> None:
+    assert sent(s.live_utility_ensure_last, 2) == ("utility.ensure_last", {"track": 2})
+    assert sent(s.live_utility_ensure_last, "master") == ("utility.ensure_last", {"track": "master"})
+    assert sent(s.live_utility_ensure_last, return_=1) == ("utility.ensure_last", {"return": 1})

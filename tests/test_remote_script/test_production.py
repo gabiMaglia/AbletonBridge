@@ -44,6 +44,15 @@ class Device:
                            Param("Frequency", 0.0, 1.0, 0.5, _hz)]
 
 
+class Utility(Device):
+    """Utility real (class StereoGain): el nivel es el parametro "Output" (-1..1, display en dB)."""
+
+    def __init__(self):
+        super().__init__("Utility")
+        self.class_name = "StereoGain"
+        self.parameters = [Param("Device On", 0, 1, 1), Param("Output", -1.0, 1.0, 0.0, lambda v: f"{v * 35:.2f} dB")]
+
+
 class RT:
     def __init__(self, display_name):
         self.display_name = display_name
@@ -282,7 +291,8 @@ class Track:
     def insert_device(self, name, index):
         if name == "Nope":
             raise RuntimeError("device not found")
-        dev = Simpler() if name == "Simpler" else Comp(self._song) if name == "Compressor" else Device(name)
+        dev = (Simpler() if name == "Simpler" else Comp(self._song) if name == "Compressor"
+               else Utility() if name == "Utility" else Device(name))
         self.devices.insert(index, dev)
         return dev
 
@@ -366,6 +376,20 @@ def song():
     s.create_audio_track(-1)
     s.create_midi_track(-1)
     return s
+
+
+@pytest.fixture
+def utility_chain(song):
+    """Utility como ULTIMO device de las pistas 0 y 1 (D-15: la automatizacion de nivel va ahi)."""
+    for t in song.tracks[:2]:
+        t.devices.append(Utility())
+
+
+UTIL_GAIN = {"device": "Utility", "param": "Output"}
+
+
+def util_param(track):
+    return next(p for p in track.devices[-1].parameters if p.name == "Output")
 
 
 @pytest.fixture
@@ -1179,37 +1203,40 @@ def env_of(song, track_idx, clip_idx, param):
     return song.tracks[track_idx].arrangement_clips[clip_idx].env_steps(param)
 
 
-VOL_RAMP = [{"target": "volume", "points": [[0, 0.2], [8, 0.8]]}]
+VOL_RAMP = [{"target": UTIL_GAIN, "points": [[0, 0.2], [8, 0.8]]}]
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_forces_session_duplicate_and_writes_ramp(song, wav) -> None:
     out = place(song, wav, envelopes=VOL_RAMP)
     assert out["ok"] is True and methods(out) == ["session_duplicate"]
-    steps = env_of(song, 0, 0, song.tracks[0].mixer_device.volume)
+    steps = env_of(song, 0, 0, util_param(song.tracks[0]))
     assert len(steps) == 32
     assert steps[0] == (0.0, 0.25, pytest.approx(0.2))
     assert steps[16][2] == pytest.approx(0.5)  # beat 4 de 8: mitad de la rampa
     assert all(d == 0.25 for _, d, _ in steps)
     assert out["clips"][0]["envelopes"] == [
-        {"target": "volume", "param": "Volume", "ok": True, "steps": 32}]
+        {"target": UTIL_GAIN, "param": "Output", "ok": True, "steps": 32}]
     assert not any(s.has_clip for s in song.tracks[0].clip_slots) and len(song.scenes) == 1
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_tiles_restart_when_span_is_tile(song, wav) -> None:
     out = place(song, wav, length_beats=20.0, envelopes=[
-        {"target": "volume", "points": [[0, 0.1], [8, 0.9]]}])
+        {"target": UTIL_GAIN, "points": [[0, 0.1], [8, 0.9]]}])
     assert methods(out) == ["session_duplicate"] * 3 and out["ok"] is True
-    vol = song.tracks[0].mixer_device.volume
+    vol = util_param(song.tracks[0])
     firsts = [env_of(song, 0, i, vol)[0][2] for i in range(3)]
     assert firsts == [pytest.approx(0.1)] * 3
     assert [len(env_of(song, 0, i, vol)) for i in range(3)] == [32, 32, 16]  # ultimo tile parcial
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_range_span_slices_one_sweep_across_tiles(song, wav) -> None:
     out = place(song, wav, start_beat=16.0, length_beats=20.0, points_span="range", envelopes=[
-        {"target": "volume", "points": [[0, 0.0], [20, 1.0]]}])
+        {"target": UTIL_GAIN, "points": [[0, 0.0], [20, 1.0]]}])
     assert out["ok"] is True
-    vol = song.tracks[0].mixer_device.volume
+    vol = util_param(song.tracks[0])
     by_start = {c.start_time: c.env_steps(vol) for c in song.tracks[0].arrangement_clips}
     assert by_start[16.0][0][2] == pytest.approx(0.0)
     assert by_start[24.0][0][2] == pytest.approx(0.4)
@@ -1217,9 +1244,10 @@ def test_place_audio_envelope_range_span_slices_one_sweep_across_tiles(song, wav
     assert by_start[32.0][-1][0] == 3.75 and by_start[32.0][-1][1] == 0.25  # tile corto, tiempos relativos
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_holds_first_and_last_value_outside_points(song, wav) -> None:
-    place(song, wav, envelopes=[{"target": "volume", "points": [[2, 0.3], [4, 0.6]]}])
-    steps = env_of(song, 0, 0, song.tracks[0].mixer_device.volume)
+    place(song, wav, envelopes=[{"target": UTIL_GAIN, "points": [[2, 0.3], [4, 0.6]]}])
+    steps = env_of(song, 0, 0, util_param(song.tracks[0]))
     assert steps[0][2] == pytest.approx(0.3) and steps[-1][2] == pytest.approx(0.6)
 
 
@@ -1249,12 +1277,14 @@ def test_place_audio_envelope_pan_and_send_targets(song, wav) -> None:
     assert [e["ok"] for e in out["clips"][0]["envelopes"]] == [True, True]
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_section_loop_uses_hook_too(song, wav) -> None:
     out = place(song, wav, length_beats=4.0, loop_start=0.0, loop_end=4.0, envelopes=VOL_RAMP)
     assert out["ok"] is True
-    assert len(env_of(song, 0, 0, song.tracks[0].mixer_device.volume)) == 16
+    assert len(env_of(song, 0, 0, util_param(song.tracks[0]))) == 16
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_failure_is_reported_per_tile_not_fatal(song, wav) -> None:
     song.fail_envelopes = True
     out = place(song, wav, envelopes=VOL_RAMP)
@@ -1272,15 +1302,16 @@ def test_place_audio_envelope_failure_is_reported_per_tile_not_fatal(song, wav) 
     [{"target": {"send": True}, "points": [[0, 0.1]]}],
     [{"target": {"device": "Nope", "param": "Drive"}, "points": [[0, 0.1]]}],
     [{"target": {"device": 0, "param": "Nope"}, "points": [[0, 0.1]]}],
-    [{"target": "volume", "points": []}],
-    [{"target": "volume", "points": [[0]]}],
-    [{"target": "volume", "points": [[-1, 0.1]]}],
-    [{"target": "volume", "points": [[0, "x"]]}],
-    [{"target": "volume", "points": [[0, {"display": "x"}]]}],
-    [{"target": "volume", "points": [[0, 7.0]]}],                   # raw fuera de rango
-    [{"target": "volume", "points": [[0, 0.1], [0, 0.2]]}],         # tiempos no crecientes
-    [{"target": "volume", "points": [[0, 0.1]]}] * 17,
+    [{"target": UTIL_GAIN, "points": []}],
+    [{"target": UTIL_GAIN, "points": [[0]]}],
+    [{"target": UTIL_GAIN, "points": [[-1, 0.1]]}],
+    [{"target": UTIL_GAIN, "points": [[0, "x"]]}],
+    [{"target": UTIL_GAIN, "points": [[0, {"display": "x"}]]}],
+    [{"target": UTIL_GAIN, "points": [[0, 7.0]]}],                   # raw fuera de rango
+    [{"target": UTIL_GAIN, "points": [[0, 0.1], [0, 0.2]]}],         # tiempos no crecientes
+    [{"target": UTIL_GAIN, "points": [[0, 0.1]]}] * 17,
 ])
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_validation(song, wav, bad) -> None:
     song.tracks[0].devices.append(Device("Auto Filter"))
     params = {"track": 0, "path": wav, "start_beat": 0, "length_beats": 8, "envelopes": bad}
@@ -1288,6 +1319,7 @@ def test_place_audio_envelope_validation(song, wav, bad) -> None:
     assert song.tracks[0].arrangement_clips == []  # valida todo antes de tocar el set
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_place_audio_envelope_other_param_validation(song, wav) -> None:
     kw = {"track": 0, "path": wav, "start_beat": 0, "length_beats": 8}
     assert code_of(production.clip_place_audio, song, dict(kw, envelopes=VOL_RAMP, points_span="x")) == errors.INVALID_PARAMS
@@ -1299,14 +1331,15 @@ def test_place_audio_no_envelopes_keeps_old_path_and_has_no_envelope_key(song, w
     assert methods(out) == ["create_audio_clip"] and "envelopes" not in out["clips"][0]
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_create_midi_envelope_goes_through_session_slot(song) -> None:
     out = production.clip_create_midi(song, LIVE, {
         "track": 1, "start_beat": 32.0, "length_beats": 4.0, "notes": NOTES, "envelopes": VOL_RAMP})
     assert (out["start_time"], out["end_time"], out["note_count"]) == (32.0, 36.0, 2)
     assert out["method"] == "session_duplicate" and out["ok"] is True
     clip = song.tracks[1].arrangement_clips[0]
-    assert len(clip.env_steps(song.tracks[1].mixer_device.volume)) == 16
-    assert out["envelopes"] == [{"target": "volume", "param": "Volume", "ok": True, "steps": 16}]
+    assert len(clip.env_steps(util_param(song.tracks[1]))) == 16
+    assert out["envelopes"] == [{"target": UTIL_GAIN, "param": "Output", "ok": True, "steps": 16}]
     assert not any(s.has_clip for s in song.tracks[1].clip_slots) and len(song.scenes) == 1
     assert len(song.tracks[1].arrangement_clips) == 1
 
@@ -1318,6 +1351,7 @@ def test_create_midi_envelope_validates_before_touching_the_set(song) -> None:
     assert song.tracks[1].arrangement_clips == []
 
 
+@pytest.mark.usefixtures("utility_chain")
 def test_create_midi_envelope_failure_reported(song) -> None:
     song.fail_envelopes = True
     out = production.clip_create_midi(song, LIVE, {
@@ -1457,3 +1491,101 @@ def test_sidechain_matches_routing_name_with_track_number_prefix(csong) -> None:
     comp.available_input_routing_types = [RT("Ext. In"), RT("No Input"), RT("1-Kick"), RT("2-Bass")]
     out = production.compressor_set_sidechain(csong, {"track": 1, "device": 0, "source_track_name": "kick"})
     assert out["input_routing_type"] == "1-Kick" and out["ok"] is True
+
+
+def test_volume_target_is_forbidden_by_golden_rule_d15():
+    # D-15 (regla inquebrantable de Gabriel): nunca automatizar el fader; usar Utility al final.
+    track = types.SimpleNamespace(mixer_device=types.SimpleNamespace(volume=object(), panning=object(), sends=[]))
+    with pytest.raises(Exception) as exc:
+        production._env_param(track, "volume")
+    assert "D-15" in str(exc.value) and "Utility" in str(exc.value)
+
+
+def test_d15_error_names_the_real_level_param_and_the_helper_command():
+    track = types.SimpleNamespace(mixer_device=types.SimpleNamespace(volume=object(), panning=object(), sends=[]))
+    with pytest.raises(errors.CommandError) as exc:
+        production._env_param(track, "volume")
+    assert exc.value.code == errors.INVALID_PARAMS
+    assert "Output" in str(exc.value) and "utility.ensure_last" in str(exc.value)
+
+
+@pytest.mark.usefixtures("utility_chain")
+def test_place_audio_with_volume_envelope_is_rejected_before_touching_the_set(song, wav) -> None:
+    params = {"track": 0, "path": wav, "start_beat": 0, "length_beats": 8,
+              "envelopes": [{"target": "volume", "points": [[0, 0.1]]}]}
+    assert code_of(production.clip_place_audio, song, params) == errors.INVALID_PARAMS
+    assert song.tracks[0].arrangement_clips == []
+
+
+# --- utility.ensure_last (D-15) ------------------------------------------------
+
+
+def test_ensure_last_inserts_utility_on_an_empty_chain(song) -> None:
+    out = production.utility_ensure_last(song, {"track": 0})
+    assert out["inserted"] is True and out["device"] == 0 and out["track"] == 0
+    assert [d.name for d in song.tracks[0].devices] == ["Utility"]
+    assert out["param"] == {"name": "Output", "min": -1.0, "max": 1.0, "value": 0.0, "display": "0.00 dB"}
+    assert out["target"] == {"device": 0, "param": "Output"} and out["warnings"] == []
+
+
+def test_ensure_last_appends_after_the_existing_chain(song) -> None:
+    song.tracks[0].devices += [Device("Saturator"), Device("Reverb")]
+    out = production.utility_ensure_last(song, {"track": 0})
+    assert out["inserted"] is True and out["device"] == 2
+    assert [d.name for d in song.tracks[0].devices] == ["Saturator", "Reverb", "Utility"]
+
+
+def test_ensure_last_is_idempotent_when_utility_is_already_last(song) -> None:
+    song.tracks[0].devices += [Device("Saturator"), Utility()]
+    out = production.utility_ensure_last(song, {"track": 0})
+    assert out["inserted"] is False and out["device"] == 1 and len(song.tracks[0].devices) == 2
+    again = production.utility_ensure_last(song, {"track": 0})
+    assert again["device"] == 1 and len(song.tracks[0].devices) == 2
+
+
+def test_ensure_last_with_a_utility_that_is_not_last_adds_a_new_one_and_reports_it(song) -> None:
+    song.tracks[0].devices += [Utility(), Device("Saturator")]
+    out = production.utility_ensure_last(song, {"track": 0})
+    assert out["inserted"] is True and out["device"] == 2
+    assert out["other_utilities"] == [0]
+    assert any("not last" in w for w in out["warnings"])
+    assert out["target"] == {"device": 2, "param": "Output"}  # por indice: hay dos Utility
+    assert len(song.tracks[0].devices) == 3
+
+
+def test_ensure_last_recognises_utility_by_class_even_if_renamed(song) -> None:
+    u = Utility()
+    u.name = "Gain Stage"
+    song.tracks[0].devices.append(u)
+    out = production.utility_ensure_last(song, {"track": 0})
+    assert out["inserted"] is False and out["device"] == 0
+
+
+def test_ensure_last_on_return_and_master(rsong) -> None:
+    r = production.utility_ensure_last(rsong, {"return": 1})
+    assert r["track"] == {"return": 1} and r["device"] == 0
+    assert [d.name for d in rsong.return_tracks[1].devices] == ["Utility"]
+    r0 = production.utility_ensure_last(rsong, {"track": {"return": 0}})
+    assert r0["device"] == 1 and r0["track"] == {"return": 0}  # Reverb + Utility
+    m = production.utility_ensure_last(rsong, {"track": "master"})
+    assert m["track"] == "master" and m["device"] == 0
+    assert [d.name for d in rsong.master_track.devices] == ["Utility"]
+
+
+@pytest.mark.parametrize("bad", [{}, {"track": 9}, {"track": "x"}, {"return": 9}, {"track": True}])
+def test_ensure_last_rejects_unknown_tracks(song, bad) -> None:
+    assert code_of(production.utility_ensure_last, song, bad) in (errors.TRACK_NOT_FOUND, errors.INVALID_PARAMS)
+    assert song.tracks[0].devices == [] and song.master_track.devices == []
+
+
+def test_ensure_last_target_feeds_a_clip_envelope(song, wav) -> None:
+    t = production.utility_ensure_last(song, {"track": 0})["target"]
+    out = place(song, wav, envelopes=[{"target": t, "points": [[0, 0.2], [8, 0.8]]}])
+    assert out["ok"] is True and len(env_of(song, 0, 0, util_param(song.tracks[0]))) == 32
+
+
+def test_ensure_last_fails_clearly_if_utility_has_no_level_param(song) -> None:
+    u = Utility()
+    u.parameters = [p for p in u.parameters if p.name != "Output"]
+    song.tracks[0].devices.append(u)
+    assert code_of(production.utility_ensure_last, song, {"track": 0}) == errors.LOM_ERROR

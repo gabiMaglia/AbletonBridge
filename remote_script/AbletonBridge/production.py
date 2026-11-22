@@ -387,13 +387,18 @@ ENV_STEP = 0.25  # beats por paso de la rampa
 MAX_ENVELOPES = 16
 MAX_ENV_POINTS = 256
 POINTS_SPANS = ("tile", "range")
+UTILITY_CLASS = "StereoGain"  # clase real del Utility en el LOM
+UTILITY_LEVEL_PARAM = "Output"  # nombre API real del nivel del Utility en Live 12.4.16 (dump del spike)
 
 
 def _env_param(track: Any, target: Any) -> Tuple[Any, Any]:
     """(parametro, etiqueta del target) para un target de envelope sobre `track`."""
     mixer = track.mixer_device
     if target == "volume":
-        return mixer.volume, "volume"
+        # D-15, regla inquebrantable: el fader queda libre para la mezcla.
+        raise _bad('D-15: never automate track volume; automate the level of a Utility placed LAST in the '
+                   f'chain: target {{"device": <index|name>, "param": "{UTILITY_LEVEL_PARAM}"}}. '
+                   'Run utility.ensure_last {track} (live_utility_ensure_last) to get it.')
     if target == "pan":
         return mixer.panning, "pan"
     if isinstance(target, dict) and set(target) == {"send"}:
@@ -409,7 +414,7 @@ def _env_param(track: Any, target: Any) -> Tuple[Any, Any]:
         if param is None:
             raise _bad(f"target.param {name!r} not found on the device (exact API name)")
         return param, {"device": target["device"], "param": name}
-    raise _bad('target must be "volume", "pan", {"send": i} or {"device": index|name, "param": name}')
+    raise _bad('target must be "pan", {"send": i} or {"device": index|name, "param": name}')
 
 
 def _env_points(param: Any, raw_points: Any, label: str, notes: List[str]) -> List[Tuple[float, float]]:
@@ -1245,6 +1250,54 @@ def device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
 
 def return_device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     return _set_device_param(_return(song, params)[1], params)
+
+
+# --- utility.ensure_last (D-15) --------------------------------------------------
+
+
+def _utility_track(song: Any, params: Dict[str, Any]) -> Tuple[Any, Any]:
+    """(track, etiqueta) desde {"track": i | "master" | {"return": i}} o {"return": i}."""
+    spec = params.get("track")
+    if spec is None and "return" in params:
+        spec = {"return": params["return"]}
+    if spec == "master":
+        return song.master_track, "master"
+    if isinstance(spec, dict) and set(spec) == {"return"}:
+        idx, track = _return(song, spec)
+        return track, {"return": idx}
+    if _is_int(spec):
+        return _track(song, {"track": spec})[1], spec
+    raise _bad('give track (index | "master" | {"return": i}) or return (index)')
+
+
+def _is_utility(dev: Any) -> bool:
+    return lom_read.get(dev, "class_name") == UTILITY_CLASS or lom_read.get(dev, "name") == "Utility"
+
+
+def utility_ensure_last(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    """D-15: garantiza un Utility como ULTIMO device y devuelve su parametro de nivel."""
+    track, label = _utility_track(song, params)
+    devices = list(track.devices)
+    utilities = [i for i, d in enumerate(devices) if _is_utility(d)]
+    warnings: List[str] = []
+    inserted = not (devices and utilities and utilities[-1] == len(devices) - 1)
+    if inserted:
+        if utilities:
+            warnings.append(f"a Utility exists at {utilities} but is not last; added a new one at the end")
+        _insert_device(track, {"name": "Utility", "index": -1})
+        devices = list(track.devices)
+    idx = len(devices) - 1
+    param = next((p for p in devices[idx].parameters if p.name == UTILITY_LEVEL_PARAM), None)
+    if param is None:
+        raise CommandError(errors.LOM_ERROR, f"the Utility has no {UTILITY_LEVEL_PARAM!r} parameter")
+    others = [i for i in utilities if i != idx]
+    out: Dict[str, Any] = {
+        "track": label, "device": idx, "inserted": inserted,
+        "param": {"name": UTILITY_LEVEL_PARAM, "min": float(param.min), "max": float(param.max), **_readback(param)},
+        "target": {"device": idx, "param": UTILITY_LEVEL_PARAM}, "warnings": warnings}
+    if others:
+        out["other_utilities"] = others
+    return out
 
 
 # --- master y sidechain (T-010) --------------------------------------------------
