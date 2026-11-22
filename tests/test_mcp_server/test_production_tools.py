@@ -42,6 +42,8 @@ def test_clip_place_audio() -> None:
 def test_clip_place_audio_one_shot_and_delete_range() -> None:
     assert sent(s.live_clip_place_audio, 0, "C:/r.wav", 480.0, None, one_shot=True) == (
         "clip.place_audio", {"track": 0, "path": "C:/r.wav", "start_beat": 480.0, "one_shot": True})
+    assert sent(s.live_clip_place_audio, 0, "C:/r.wav", None, None, one_shot=True, end_beat=64.0) == (
+        "clip.place_audio", {"track": 0, "path": "C:/r.wav", "end_beat": 64.0, "one_shot": True})
     assert sent(s.live_clip_delete_range, 2, 0.0, 64.0) == (
         "clip.delete_range", {"track": 2, "start_beat": 0.0, "end_beat": 64.0})
 

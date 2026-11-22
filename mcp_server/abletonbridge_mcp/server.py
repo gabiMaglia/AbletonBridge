@@ -144,7 +144,7 @@ def live_clip_place_audio(
     client: BridgeClient,
     track: int,
     path: str,
-    start_beat: float,
+    start_beat: Optional[float],
     length_beats: Optional[float],
     warp_mode: Optional[int] = None,
     pitch_coarse: Optional[int] = None,
@@ -154,13 +154,18 @@ def live_clip_place_audio(
     one_shot: Optional[bool] = None,
     envelopes: Optional[List[Dict[str, Any]]] = None,
     points_span: Optional[str] = None,
+    end_beat: Optional[float] = None,
 ) -> Dict[str, Any]:
-    """envelopes: [{target, points}] se escriben en cada tile (ver contrato T-010)."""
+    """
+    envelopes: [{target, points}] se escriben en cada tile (ver contrato T-010).
+    one_shot: duracion exacta del sample (warp markers forzados); usar start_beat O end_beat
+    (end_beat = donde TERMINA, p.ej. un riser que cae en un downbeat).
+    """
     return client.send_request("clip.place_audio", _compact(
         track=track, path=path, start_beat=start_beat, length_beats=length_beats,
         warp_mode=warp_mode, pitch_coarse=pitch_coarse, gain_db=gain_db,
         loop_start=loop_start, loop_end=loop_end, one_shot=one_shot,
-        envelopes=envelopes, points_span=points_span))
+        envelopes=envelopes, points_span=points_span, end_beat=end_beat))
 
 
 def live_clip_delete_range(client: BridgeClient, track: int, start_beat: float, end_beat: float) -> Dict[str, Any]:

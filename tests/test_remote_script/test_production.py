@@ -130,7 +130,8 @@ class AClip(EnvMixin):
     markers; solo lo fija el loop del clip de Session al duplicarlo. Sin crop().
     """
 
-    def __init__(self, path, start, natural, honor_trim=True, gain_display=True):
+    def __init__(self, path, start, natural, honor_trim=True, gain_display=True, sample_secs=None,
+                 fail_warp=False):
         self._init_env()
         self.file_path, self.start_time = path, start
         self.end_time = start + natural
@@ -138,6 +139,21 @@ class AClip(EnvMixin):
         self.loop_start, self.loop_end, self.looping = 0.0, natural, False
         self.warping, self.warp_mode, self.pitch_coarse, self.gain = True, 0, 0, 0.4
         self._honor, self._gain_display = honor_trim, gain_display
+        self.sample_rate = 44100.0
+        self.sample_length = int((sample_secs if sample_secs is not None else 4.0) * 44100)
+        self._fail_warp = fail_warp
+        # Live 12.4: el auto-warp deja un marker de ancla pegado al inicio (visto en real)
+        self.warp_markers = [types.SimpleNamespace(beat_time=0.0, sample_time=0.0),
+                             types.SimpleNamespace(beat_time=0.03125, sample_time=0.0146)]
+
+    def add_warp_marker(self, beat_time, sample_time=None):
+        if self._fail_warp:
+            raise RuntimeError("add_warp_marker refused")
+        self.warp_markers.append(types.SimpleNamespace(beat_time=beat_time, sample_time=sample_time))
+        self.warp_markers.sort(key=lambda m: m.beat_time)
+
+    def remove_warp_marker(self, beat_time):
+        self.warp_markers = [m for m in self.warp_markers if abs(m.beat_time - beat_time) > 1e-9]
 
     @property
     def length(self):
@@ -166,7 +182,8 @@ class Slot:
     def create_audio_clip(self, path):
         s = self._track._song
         # No devuelve el clip a proposito: el codigo debe leer slot.clip
-        self.clip = AClip(path, 0.0, s.natural, s.honor_trim, s.gain_display)
+        self.clip = AClip(path, 0.0, s.natural, s.honor_trim, s.gain_display, s.sample_secs,
+                          s.fail_warp)
         self.clip._fail_env = s.fail_envelopes
 
     def create_clip(self, length):
@@ -215,7 +232,11 @@ class Track:
             new = MClip(time, clip.length)
             new.notes = list(clip.notes)
         else:
-            new = AClip(clip.file_path, time, clip.loop_end - clip.loop_start)
+            span = clip.loop_end - clip.loop_start
+            if not clip.looping and self._song.dup_ignores_loop_off:
+                span = self._song.natural  # Live ignora el loop si looping=False
+            new = AClip(clip.file_path, time, span)
+            new.warp_markers = list(clip.warp_markers)
             for k in ("start_marker", "end_marker", "loop_start", "loop_end", "looping",
                       "warping", "warp_mode", "pitch_coarse", "gain"):
                 object.__setattr__(new, k, getattr(clip, k))
@@ -256,6 +277,7 @@ class Song:
         self.freeze_playhead = False
         self.natural, self.honor_trim, self.gain_display = 8.0, True, True
         self.fail_envelopes = False
+        self.sample_secs, self.fail_warp, self.dup_ignores_loop_off = None, False, False
         self.master_track = Track(self, False, "Master")
 
     def create_scene(self, i):
@@ -523,34 +545,127 @@ def test_place_audio_loop_section(song, wav) -> None:
     assert out["ok"] is True
 
 
-def test_place_audio_one_shot_is_placed_once_unwarped(song, wav) -> None:
-    out = place(song, wav, length_beats=40.0, one_shot=True, warp_mode=4)
-    assert len(out["clips"]) == 1
+def one_shot(song, wav, **kw):
+    params = {"track": 0, "path": wav, "start_beat": 0.0, "one_shot": True}
+    params.update(kw)
+    return production.clip_place_audio(song, params)
+
+
+def test_one_shot_span_equals_sample_beats_not_live_guess(song, wav) -> None:
+    song.tempo, song.sample_secs, song.natural = 134.0, 21.30, 32.0  # riser 'excite'
+    out = one_shot(song, wav, start_beat=64.0)
     c = out["clips"][0]
-    assert c["warping"] is False and c["method"] == "create_audio_clip"
-    assert c["span"] == 8.0 and out["covered_beats"] == 8.0
     assert out["ok"] is True and out["warnings"] == []
+    assert abs(out["sample_beats"] - 47.57) < 0.01
+    assert c["start_time"] == 64.0 and abs(c["span"] - out["sample_beats"]) < 1e-6
+    assert c["method"] == out["method"] == "session_duplicate_oneshot"
+    assert abs(out["covered_beats"] - out["sample_beats"]) < 1e-6
 
 
-def test_place_audio_one_shot_without_length(song, wav) -> None:
-    out = production.clip_place_audio(song, {"track": 0, "path": wav, "start_beat": 4.0, "one_shot": True})
-    assert out["ok"] is True and out["clips"][0]["start_time"] == 4.0
+def test_one_shot_forces_warp_markers_to_whole_sample(song, wav) -> None:
+    song.tempo, song.sample_secs = 134.0, 21.30
+    out = one_shot(song, wav)
+    wm = out["warp_markers"]
+    assert wm[0] == {"beat_time": 0.0, "sample_time": 0.0}
+    assert len(wm) == 2  # el marker de ancla automatico se elimina
+    assert abs(wm[-1]["beat_time"] - out["sample_beats"]) < 1e-9
+    assert abs(wm[-1]["sample_time"] - 21.30) < 1e-9
 
 
-def test_place_audio_one_shot_longer_than_requested_warns(song, wav) -> None:
-    out = place(song, wav, length_beats=4.0, one_shot=True)
+def test_one_shot_warps_with_complex_by_default_and_honors_warp_mode(song, wav) -> None:
+    assert one_shot(song, wav)["clips"][0]["warp_mode"] == 4
+    assert one_shot(song, wav, start_beat=32.0, warp_mode=6)["clips"][0]["warp_mode"] == 6
+    assert all(c.warping is True for c in song.tracks[0].arrangement_clips)
+
+
+def test_one_shot_loop_and_markers_match_sample_beats_and_scratch_is_clean(song, wav) -> None:
+    song.sample_secs = 2.0  # 4 beats a 120
+    one_shot(song, wav)
+    placed = song.tracks[0].arrangement_clips[0]
+    assert (placed.loop_start, placed.loop_end, placed.end_marker, placed.looping) == (0.0, 4.0, 4.0, False)
+    assert not any(sl.has_clip for sl in song.tracks[0].clip_slots) and len(song.scenes) == 1
+
+
+def test_one_shot_end_beat_places_start_before_it(song, wav) -> None:
+    song.sample_secs = 4.0  # 8 beats
+    out = production.clip_place_audio(song, {"track": 0, "path": wav, "end_beat": 64.0, "one_shot": True})
+    c = out["clips"][0]
+    assert c["start_time"] == 56.0 and c["end_time"] == 64.0 and out["ok"] is True
+
+
+def test_one_shot_end_beat_before_zero_is_rejected_and_cleans_up(song, wav) -> None:
+    song.sample_secs = 4.0
+    assert code_of(production.clip_place_audio, song,
+                   {"track": 0, "path": wav, "end_beat": 4.0, "one_shot": True}) == errors.INVALID_PARAMS
+    assert song.tracks[0].arrangement_clips == []
+    assert not any(sl.has_clip for sl in song.tracks[0].clip_slots)
+
+
+def test_one_shot_start_and_end_beat_validation(song, wav) -> None:
+    base = {"track": 0, "path": wav, "one_shot": True}
+    for bad in ({}, {"start_beat": 0, "end_beat": 8}):
+        assert code_of(production.clip_place_audio, song, dict(base, **bad)) == errors.INVALID_PARAMS
+    assert code_of(production.clip_place_audio, song,
+                   {"track": 0, "path": wav, "end_beat": 8, "length_beats": 4}) == errors.INVALID_PARAMS
+
+
+def test_one_shot_falls_back_to_looping_true_when_live_ignores_loop_off(song, wav) -> None:
+    song.dup_ignores_loop_off, song.natural, song.sample_secs = True, 32.0, 4.0
+    out = one_shot(song, wav)
+    assert out["ok"] is True and out["clips"][0]["span"] == 8.0
+    assert len(song.tracks[0].arrangement_clips) == 1  # la copia mala se borro
+    assert song.tracks[0].arrangement_clips[0].looping is True
+
+
+def test_one_shot_warp_marker_failure_reports_step_and_places_nothing(song, wav) -> None:
+    song.fail_warp = True
+    out = one_shot(song, wav)
+    assert out["ok"] is False and out["clips"] == []
+    assert out["steps"]["copy0_warp_markers"]["ok"] is False
+    assert any("warp" in w for w in out["warnings"])
+    assert song.tracks[0].arrangement_clips == []
+    assert not any(sl.has_clip for sl in song.tracks[0].clip_slots)
+
+
+def test_one_shot_without_sample_length_fails_clearly(song, wav) -> None:
+    orig = AClip.__init__
+
+    def init(self, *a, **k):
+        orig(self, *a, **k)
+        del self.sample_length
+
+    AClip.__init__ = init
+    try:
+        out = one_shot(song, wav)
+    finally:
+        AClip.__init__ = orig
+    assert out["ok"] is False and out["clips"] == []
+    assert any("sample_length" in w for w in out["warnings"])
+
+
+def test_one_shot_wrong_span_reports_not_ok(song, wav) -> None:
+    song.dup_ignores_loop_off = True  # Live ignora looping=False ...
+    song.natural = 32.0
+    song.sample_secs = 2.0
+    orig = Track.delete_clip
+    Track.delete_clip = lambda self, clip: None  # ... y ademas no se puede reintentar
+    try:
+        out = one_shot(song, wav)
+    finally:
+        Track.delete_clip = orig
+    assert out["ok"] is False and any("span" in w for w in out["warnings"])
+
+
+def test_one_shot_longer_than_requested_length_warns(song, wav) -> None:
+    out = one_shot(song, wav, length_beats=4.0)
     assert out["clips"][0]["span"] == 8.0
     assert any("one_shot" in w and "8" in w for w in out["warnings"])
 
 
-def test_place_audio_one_shot_reports_sample_beats(song, wav) -> None:
-    AClip.sample_length = 44100 * 4
-    AClip.sample_rate = 44100.0
-    try:
-        out = place(song, wav, one_shot=True)
-    finally:
-        del AClip.sample_length, AClip.sample_rate
-    assert out["sample_beats"] == 8.0  # 4 s a 120 bpm
+def test_one_shot_applies_pitch_and_gain(song, wav) -> None:
+    out = one_shot(song, wav, pitch_coarse=-3, gain_db=-6)
+    assert out["clips"][0]["pitch_coarse"] == -3
+    assert out["gain"]["applied"] is True
 
 
 def test_place_audio_length_required_unless_one_shot(song, wav) -> None:
