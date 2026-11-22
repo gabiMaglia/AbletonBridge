@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Sequence
 # Orden de dependencias (cada modulo despues de los que importa); un test lo verifica contra el AST.
 RELOAD_ORDER = (
     "errors", "version", "protocol", "lom_read", "dispatcher", "handlers", "production",
-    "spikes", "spikes_media", "state_detail", "server", "runtime",
+    "automation", "spikes", "spikes_media", "state_detail", "server", "runtime",
 )
 
 

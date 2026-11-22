@@ -7,7 +7,7 @@ que `bridge.reload` pueda descartar el objeto entero y construir otro con los mo
 """
 from typing import Any, Callable, Dict
 
-from . import handlers, production, spikes, spikes_media, state_detail, version
+from . import automation, handlers, production, spikes, spikes_media, state_detail, version
 from .dispatcher import UIDispatcher
 from .server import BridgeServer
 
@@ -23,6 +23,7 @@ class BridgeRuntime:
         self.dispatcher = UIDispatcher()
         self.spikes = spikes.RecordSpike()
         self.locators = production.LocatorQueue()
+        self.automation = automation.AutomationRecorder()
         self.server = BridgeServer(
             dispatcher=self.dispatcher,
             live_info_provider=lambda: self._live_info,
@@ -54,7 +55,9 @@ class BridgeRuntime:
 
     def busy(self) -> bool:
         """True si hay una maquina de estados a mitad de camino (un reload la perderia)."""
-        return getattr(self.locators, "_phase", "idle") != "idle" or getattr(self.spikes, "phase", "idle") == "running"
+        return (getattr(self.locators, "_phase", "idle") != "idle"
+                or getattr(self.spikes, "phase", "idle") == "running"
+                or self.automation.busy())
 
     def tick(self) -> None:
         # Cada pieza aislada: una rota no frena el pump ni a las demas.
@@ -71,6 +74,10 @@ class BridgeRuntime:
             self.locators.tick(self.song())
         except Exception as exc:  # noqa: BLE001
             log(f"AbletonBridge: locator tick error: {exc!r}")
+        try:
+            self.automation.tick(self.song())
+        except Exception as exc:  # noqa: BLE001
+            log(f"AbletonBridge: automation tick error: {exc!r}")
 
     # -- bridge.* --
 
@@ -119,6 +126,10 @@ class BridgeRuntime:
             "locator.set_many": lambda p: self.locators.set_many(song(), p),
             "locator.status": lambda p: self.locators.status(song()),
             "locator.clear_all": lambda p: self.locators.clear_all(song(), p),
+            "automation.record": lambda p: self.automation.record(song(), p),
+            "automation.status": lambda p: self.automation.status(song()),
+            "automation.cancel": lambda p: self.automation.cancel(song()),
+            "automation.clear": lambda p: automation.clear(song(), p),
             "probe.api": lambda params: handlers.probe_api(self._live, self._live_info),
             "spike.automation_session": lambda p: spikes.automation_session(song(), self._live, p),
             "spike.automation_record_start": lambda p: self.spikes.start(song(), self._live, p),

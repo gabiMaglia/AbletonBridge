@@ -198,6 +198,17 @@ def test_reload_is_deferred_while_locator_queue_is_busy(instance, monkeypatch) -
     assert _tick_until(instance, lambda: instance.reload_count == 1)
 
 
+def test_reload_is_deferred_while_an_automation_recording_is_in_flight(instance, monkeypatch) -> None:
+    calls = fake_reload(monkeypatch)
+    instance.runtime.automation.tick = lambda song: None  # el song falso no modela la grabacion
+    instance.runtime.automation.phase = "recording"
+    instance.request_reload()
+    instance._tick()
+    assert calls == [] and instance.reload_count == 0
+    instance.runtime.automation.phase = "idle"
+    assert _tick_until(instance, lambda: instance.reload_count == 1)
+
+
 def test_tick_never_raises_when_everything_fails(instance, monkeypatch) -> None:
     fake_reload(monkeypatch, boom_on="errors")
     instance.request_reload()

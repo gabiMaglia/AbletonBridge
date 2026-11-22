@@ -336,6 +336,72 @@ def live_bridge_reload(
     return {"reloaded": True, "before": before, "after": after, "elapsed_s": round(clock() - started, 3)}
 
 
+# --- T-012: automatizacion de pista grabada (lane real) ---
+
+AUTOMATION_FINAL_PHASES = ("done", "error", "cancelled")
+AUTOMATION_TIMEOUT_MARGIN_S = 20.0
+
+
+def live_automation_record(
+    client: BridgeClient,
+    start_beat: float,
+    end_beat: float,
+    lanes: List[Dict[str, Any]],
+    preroll_beats: float = 4.0,
+    poll_interval: float = 1.0,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> Dict[str, Any]:
+    """
+    Graba `lanes` [{track, target, points:[[beat, valor]]}] como automatizacion REAL de pista
+    (Automation Arm + record + transporte). Encola `automation.record` y sondea `automation.status`
+    hasta done/error/cancelled; devuelve el status final. Tope: (fin-inicio+preroll) beats al tempo
+    de Live + 20 s; si vence, cancela (restaura el set) y lanza BridgeTimeoutError.
+    """
+    if start_beat < 0 or end_beat <= start_beat:
+        raise ValueError("need 0 <= start_beat < end_beat")
+    if preroll_beats < 0:
+        raise ValueError("preroll_beats must be >= 0")
+    if not isinstance(lanes, list) or not lanes:
+        raise ValueError("lanes must be a non-empty list")
+    queued = client.send_request("automation.record", {
+        "start_beat": start_beat, "end_beat": end_beat, "lanes": lanes, "preroll_beats": preroll_beats})
+    tempo = float(queued.get("tempo") or 120.0)
+    budget = (end_beat - start_beat + preroll_beats) * 60.0 / tempo + AUTOMATION_TIMEOUT_MARGIN_S
+    deadline = clock() + budget
+    while True:
+        status = client.send_request("automation.status", {})
+        if status.get("phase") in AUTOMATION_FINAL_PHASES:
+            return status
+        if clock() >= deadline:
+            try:
+                client.send_request("automation.cancel", {})
+            except BridgeError:
+                pass
+            raise BridgeTimeoutError(
+                f"automation recording did not finish within {budget:g}s (phase {status.get('phase')!r}); "
+                "it was cancelled and the set restored"
+            )
+        sleep(poll_interval)
+
+
+def live_automation_status(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("automation.status", {})
+
+
+def live_automation_cancel(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("automation.cancel", {})
+
+
+def live_automation_clear(
+    client: BridgeClient, track: Any, target: Any,
+    start_beat: Optional[float] = None, end_beat: Optional[float] = None,
+) -> Dict[str, Any]:
+    """Best-effort: si el LOM no puede borrar un lane responde supported:false."""
+    return client.send_request("automation.clear", _compact(
+        track=track, target=target, start_beat=start_beat, end_beat=end_beat))
+
+
 # --- Spikes temporales T-002c (automatizacion en Arrangement) ---
 
 
