@@ -10,6 +10,7 @@ runtime.tick, sin bloquear ni dormir:
 Todo se valida y resuelve (incluido `display` -> raw) antes de tocar el set. Stdlib pura.
 """
 import bisect
+import json
 import math
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -332,3 +333,350 @@ def clear(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         out["error"] = f"{type(exc).__name__}: {exc}"
     return out
+
+
+# --- T-017: medicion de niveles (solo lectura) -------------------------------------------------
+# Vive aqui y no en un modulo nuevo: el reloader instalado no conoce modulos nuevos (haria falta
+# reiniciar Live). Reusa el transporte de AutomationRecorder (start + salto con el transporte andando).
+
+METER_ACTIVE = ("queued", "seeking", "preroll", "measuring")
+METER_MAX_BIN_BARS = 64
+METER_STATUS_BUDGET = 55_000  # caracteres de JSON; por encima se omiten los bins (tope MCP ~60k)
+DB_UNCALIBRATED = "db_estimate_uncalibrated"
+DB_CALIBRATED = "db_calibrated"
+
+
+class MeterCalibration:
+    """raw (0..1 del medidor) -> dBFS. Sin puntos: 20*log10(raw), sin calibrar. Con puntos: lineal por
+    tramos en espacio log10(raw), extrapolando con la pendiente del tramo extremo (1 punto: 20 dB/decada)."""
+
+    def __init__(self, points: Optional[List[List[float]]]) -> None:
+        self.points: List[Tuple[float, float]] = sorted(
+            (math.log10(float(r)), float(d)) for r, d in (points or []))
+        self.label = DB_CALIBRATED if self.points else DB_UNCALIBRATED
+
+    @classmethod
+    def parse(cls, raw: Any) -> "MeterCalibration":
+        if raw is None:
+            return cls(None)
+        pts = raw.get("points") if isinstance(raw, dict) else None
+        if not isinstance(pts, list) or not 1 <= len(pts) <= 64:
+            raise _bad("calibration must be {points: [[raw, dbfs], ...]} with 1..64 points")
+        seen = set()
+        for i, p in enumerate(pts):
+            if (not isinstance(p, (list, tuple)) or len(p) != 2 or not _is_num(p[0]) or not _is_num(p[1])
+                    or p[0] <= 0):
+                raise _bad(f"calibration.points[{i}] must be [raw > 0, dbfs]")
+            if p[0] in seen:
+                raise _bad("calibration.points raw values must be distinct")
+            seen.add(p[0])
+        return cls(pts)
+
+    def to_db(self, raw: Optional[float]) -> Optional[float]:
+        if raw is None or raw <= 0:
+            return None
+        if not self.points:
+            return 20.0 * math.log10(raw)
+        x = math.log10(raw)
+        pts = self.points
+        if len(pts) == 1:
+            return pts[0][1] + 20.0 * (x - pts[0][0])
+        i = min(max(bisect.bisect_left([p[0] for p in pts], x), 1), len(pts) - 1)
+        (x0, d0), (x1, d1) = pts[i - 1], pts[i]
+        return d0 + (d1 - d0) * (x - x0) / (x1 - x0)
+
+
+def _r(v: Optional[float], nd: int) -> Optional[float]:
+    return None if v is None else round(v, nd)
+
+
+class _Acc:
+    """Pico (max), suma, suma de cuadrados y cantidad de muestras."""
+
+    __slots__ = ("peak", "sum", "sq", "n")
+
+    def __init__(self) -> None:
+        self.peak, self.sum, self.sq, self.n = 0.0, 0.0, 0.0, 0
+
+    def add(self, v: float) -> None:
+        self.peak = max(self.peak, v)
+        self.sum += v
+        self.sq += v * v
+        self.n += 1
+
+    def rms(self) -> float:
+        return math.sqrt(self.sq / self.n) if self.n else 0.0
+
+    def mean(self) -> float:
+        return self.sum / self.n if self.n else 0.0
+
+
+def _read_meter(track: Any) -> Optional[float]:
+    """Nivel crudo 0..1: max(L, R); output_meter_level solo si no hay L/R. None si no hay nada.
+    Una propiedad que revienta propaga: la aisla el llamador por target."""
+    vals = [float(v) for v in (getattr(track, "output_meter_left", None),
+                               getattr(track, "output_meter_right", None)) if v is not None]
+    if not vals:
+        level = getattr(track, "output_meter_level", None)
+        if level is not None:
+            vals.append(float(level))
+    return max(vals) if vals else None
+
+
+def _find_gr_sources(track: Any) -> List[Tuple[str, str, Callable[[], float]]]:
+    """(device, fuente, lector) de todo atributo/parametro con 'reduction' en el nombre (guardado):
+    el LOM no documenta gain reduction, asi que solo se informa lo que realmente exista."""
+    found: List[Tuple[str, str, Callable[[], float]]] = []
+    try:
+        devices = list(getattr(track, "devices", None) or [])
+    except Exception:  # noqa: BLE001
+        return found
+    for dev in devices:
+        dname = str(getattr(dev, "name", "?"))
+        try:
+            attrs = [a for a in dir(dev) if "reduction" in a.lower() and not a.startswith("_")]
+            for a in attrs:
+                if isinstance(getattr(dev, a, None), (int, float)):
+                    found.append((dname, a, lambda d=dev, a=a: float(getattr(d, a))))
+            for p in list(getattr(dev, "parameters", None) or []):
+                pname = str(getattr(p, "name", ""))
+                if "reduction" in pname.lower():
+                    found.append((dname, f"param:{pname}", lambda p=p: float(p.value)))
+        except Exception:  # noqa: BLE001
+            continue
+    return found
+
+
+def _fader_display(track: Any) -> Optional[str]:
+    try:
+        vol = track.mixer_device.volume
+        return str(vol.str_for_value(vol.value))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+class _Target:
+    def __init__(self, kind: str, index: Optional[int], track: Any) -> None:
+        self.kind, self.index, self.track = kind, index, track
+        self.name = str(getattr(track, "name", "?"))
+        self.fader = _fader_display(track)
+        self.total = _Acc()
+        self.bins: Dict[int, _Acc] = {}
+        self.gr = [(d, s, fn, _Acc()) for d, s, fn in _find_gr_sources(track)]
+        self.failed: Optional[str] = None
+
+
+class MeterCapture:
+    """meter.capture: lee los medidores de salida mientras Live reproduce [start, end). Solo lectura."""
+
+    _seeking = AutomationRecorder._seeking  # mismo salto "start y luego saltar" (spike 2)
+
+    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
+        self._clock = clock
+        self._reset()
+
+    def _reset(self) -> None:
+        self.phase = "idle"
+        self.errors: List[str] = []
+        self.notes: List[str] = []
+        self._targets: List[_Target] = []
+        self._cal = MeterCalibration(None)
+        self._start = self._end = self._preroll_beats = self._seek_to = 0.0
+        self._bar_beats = 4.0
+        self._bin_bars = 8
+        self._tempo = 120.0
+        self._deadline = 0.0
+        self._current: Optional[float] = None
+        self._seek_wait = 0
+        self._touched = False
+        self._prev_time: Optional[float] = None
+
+    def busy(self) -> bool:
+        return self.phase in METER_ACTIVE
+
+    # -- comandos --
+
+    def capture(self, song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+        if self.busy():
+            raise _bad(f"a meter capture is already {self.phase}; cancel it first (meter.cancel)")
+        start = production._req_num(params, "start_beat", lo=0.0)
+        end = production._req_num(params, "end_beat", lo=0.0)
+        if end <= start:
+            raise _bad("end_beat must be > start_beat")
+        preroll = production._num(params, "preroll_beats", lo=0.0, hi=MAX_PREROLL)
+        preroll = 2.0 if preroll is None else preroll
+        bin_bars = params.get("bin_bars", 8)
+        if not _is_int(bin_bars) or not 1 <= bin_bars <= METER_MAX_BIN_BARS:
+            raise _bad(f"bin_bars must be an integer 1..{METER_MAX_BIN_BARS}")
+        inc_ret = params.get("include_returns", True)
+        inc_master = params.get("include_master", True)
+        if not isinstance(inc_ret, bool) or not isinstance(inc_master, bool):
+            raise _bad("include_returns and include_master must be booleans")
+        cal = MeterCalibration.parse(params.get("calibration"))
+        spec = params.get("tracks", "all")
+        if spec == "all":
+            idxs = list(range(len(song.tracks)))
+        elif isinstance(spec, list) and spec and all(_is_int(i) for i in spec):
+            missing = [i for i in spec if not 0 <= i < len(song.tracks)]
+            if missing:
+                raise _bad(f"track {missing[0]!r} not found")
+            idxs = list(dict.fromkeys(spec))
+        else:
+            raise _bad('tracks must be "all" or a non-empty list of track indices')
+
+        notes: List[str] = []
+        targets: List[_Target] = []
+
+        def add(kind: str, index: Optional[int], track: Any) -> None:
+            if getattr(track, "has_audio_output", True) is False:
+                notes.append(f"{getattr(track, 'name', '?')}: MIDI-only output (no audio), skipped")
+                return
+            targets.append(_Target(kind, index, track))
+
+        for i in idxs:
+            add("track", i, song.tracks[i])
+        if inc_ret:
+            for i, tr in enumerate(song.return_tracks):
+                add("return", i, tr)
+        if inc_master:
+            add("master", None, song.master_track)
+        if not targets:
+            raise _bad("no measurable audio targets selected")
+
+        tempo = float(getattr(song, "tempo", 120.0)) or 120.0
+        num = float(getattr(song, "signature_numerator", 4) or 4)
+        den = float(getattr(song, "signature_denominator", 4) or 4)
+        expected = (end - start + preroll) * 60.0 / tempo
+        self._reset()
+        self._targets, self._cal, self.notes = targets, cal, notes
+        self._start, self._end, self._preroll_beats, self._tempo = start, end, preroll, tempo
+        self._bar_beats, self._bin_bars = num * 4.0 / den, bin_bars
+        self._deadline = self._clock() + expected * 2.0 + 20.0
+        self.phase = "queued"
+        return {"queued": True, "phase": self.phase, "targets": len(targets), "tempo": tempo,
+                "expected_seconds": expected, "db_mapping": cal.label, "warnings": list(notes)}
+
+    def cancel(self, song: Any) -> Dict[str, Any]:
+        if not self.busy():
+            return {"cancelled": False, "phase": self.phase}
+        self._finalize(song)
+        self.phase = "cancelled"
+        return {"cancelled": True, "phase": self.phase, "errors": list(self.errors)}
+
+    def status(self, song: Any) -> Dict[str, Any]:
+        span = self._end - self._start
+        if self.phase == "done":
+            progress = 1.0
+        elif self.phase in ("measuring", "error", "cancelled") and self._current is not None and span > 0:
+            progress = min(1.0, max(0.0, (self._current - self._start) / span))
+        else:
+            progress = 0.0
+        warnings = list(self.notes)
+        warnings += [f"{t.name}: meter read failed ({t.failed})" for t in self._targets if t.failed]
+        out: Dict[str, Any] = {
+            "phase": self.phase, "progress": round(progress, 3), "current_beat": self._current,
+            "start_beat": self._start, "end_beat": self._end, "tempo": self._tempo,
+            "db_mapping": self._cal.label, "bin_bars": self._bin_bars,
+            "targets": [self._report(t) for t in self._targets], "errors": list(self.errors),
+            "warnings": warnings,
+        }
+        if len(json.dumps(out)) > METER_STATUS_BUDGET:
+            for t in out["targets"]:
+                t.pop("bins", None)
+            warnings.append("bins omitted: result too large; use a larger bin_bars or fewer tracks")
+        return out
+
+    def _report(self, t: _Target) -> Dict[str, Any]:
+        db = self._cal.to_db
+        rep: Dict[str, Any] = {
+            "kind": t.kind, "index": t.index, "name": t.name, "fader_display": t.fader,
+            "samples": t.total.n, "peak_raw": _r(t.total.peak, 4), "peak_db_est": _r(db(t.total.peak), 1),
+            "rms_raw": _r(t.total.rms(), 4), "rms_db_est": _r(db(t.total.rms()), 1),
+        }
+        bins = []
+        for idx in sorted(t.bins):
+            a = t.bins[idx]
+            bin_start = self._start + idx * self._bin_bars * self._bar_beats
+            bar_from = int(math.floor(bin_start / self._bar_beats + 1e-9)) + 1
+            bins.append({"bar_from": bar_from, "bar_to": bar_from + self._bin_bars - 1,
+                         "peak_raw": _r(a.peak, 4), "peak_db_est": _r(db(a.peak), 1),
+                         "rms_db_est": _r(db(a.rms()), 1)})
+        rep["bins"] = bins
+        sampled = [{"device": d, "source": s, "max": _r(a.peak, 2), "mean": _r(a.mean(), 2)}
+                   for d, s, _, a in t.gr if a.n]
+        rep["gain_reduction"] = sampled or "unavailable"
+        return rep
+
+    # -- maquina de estados (hilo principal) --
+
+    def tick(self, song: Any) -> None:
+        if self.phase not in METER_ACTIVE:
+            return
+        try:
+            if self._clock() > self._deadline:
+                raise TimeoutError(f"timeout in phase {self.phase}: the transport did not reach the end of the range")
+            getattr(self, "_" + self.phase)(song)
+        except Exception as exc:  # noqa: BLE001 - nunca propagar a Live
+            self.errors.append(f"{type(exc).__name__}: {exc}")
+            self._finalize(song)
+            self.phase = "error"
+
+    def _queued(self, song: Any) -> None:
+        self._touched = True
+        self._prev_time = float(song.current_song_time)
+        if getattr(song, "is_playing", False):
+            song.stop_playing()
+        self._seek_to = max(0.0, self._start - self._preroll_beats)
+        song.start_playing()
+        self._seek_wait = 0
+        self.phase = "seeking"
+
+    def _preroll(self, song: Any) -> None:
+        t = float(song.current_song_time)
+        self._current = t
+        if not getattr(song, "is_playing", False) or t < self._start - PUNCH_TOL:
+            return
+        self.phase = "measuring"
+        self._measuring(song)
+
+    def _measuring(self, song: Any) -> None:
+        t = float(song.current_song_time)
+        self._current = t
+        if t >= self._end:
+            self._finalize(song)
+            self.phase = "done"
+            return
+        idx = int((t - self._start) // (self._bin_bars * self._bar_beats))
+        for tg in self._targets:
+            self._sample(tg, idx)
+
+    def _sample(self, tg: _Target, idx: int) -> None:
+        try:
+            v = _read_meter(tg.track)
+        except Exception as exc:  # noqa: BLE001 - aislado por target
+            tg.failed = f"{type(exc).__name__}: {exc}"
+            return
+        if v is not None:
+            tg.total.add(v)
+            tg.bins.setdefault(idx, _Acc()).add(v)
+        for _, _, fn, acc in tg.gr:
+            try:
+                acc.add(abs(fn()))
+            except Exception:  # noqa: BLE001
+                pass
+
+    def _finalize(self, song: Any) -> None:
+        """Restaura transporte y playhead; jamas se toca record_mode ni Automation Arm."""
+        if not self._touched:
+            return
+
+        def attempt(fn: Callable[[], Any]) -> None:
+            try:
+                fn()
+            except Exception as exc:  # noqa: BLE001
+                self.errors.append(f"restore: {type(exc).__name__}: {exc}")
+
+        attempt(song.stop_playing)
+        if self._prev_time is not None:
+            attempt(lambda: setattr(song, "current_song_time", self._prev_time))
+        self._touched = False

@@ -24,6 +24,7 @@ class BridgeRuntime:
         self.spikes = spikes.RecordSpike()
         self.locators = production.LocatorQueue()
         self.automation = automation.AutomationRecorder()
+        self.meter = automation.MeterCapture()
         self.server = BridgeServer(
             dispatcher=self.dispatcher,
             live_info_provider=lambda: self._live_info,
@@ -57,7 +58,8 @@ class BridgeRuntime:
         """True si hay una maquina de estados a mitad de camino (un reload la perderia)."""
         return (getattr(self.locators, "_phase", "idle") != "idle"
                 or getattr(self.spikes, "phase", "idle") == "running"
-                or self.automation.busy())
+                or self.automation.busy()
+                or self.meter.busy())
 
     def tick(self) -> None:
         # Cada pieza aislada: una rota no frena el pump ni a las demas.
@@ -78,6 +80,10 @@ class BridgeRuntime:
             self.automation.tick(self.song())
         except Exception as exc:  # noqa: BLE001
             log(f"AbletonBridge: automation tick error: {exc!r}")
+        try:
+            self.meter.tick(self.song())
+        except Exception as exc:  # noqa: BLE001
+            log(f"AbletonBridge: meter tick error: {exc!r}")
 
     # -- bridge.* --
 
@@ -94,6 +100,13 @@ class BridgeRuntime:
             "reload_count": getattr(self.host, "reload_count", 0),
             "port": self.server.port,
         }
+
+    def _exclusive(self, other: Any, label: str, fn: Callable[..., Dict[str, Any]],
+                   params: Dict[str, Any]) -> Dict[str, Any]:
+        """Automation y meter comparten el transporte: no pueden correr a la vez."""
+        if other.busy():
+            raise production._bad(f"a {label} is in progress; wait for it or cancel it first")
+        return fn(self.song(), params)
 
     def _build_handlers(self) -> Dict[str, Handler]:
         song = self.song
@@ -127,7 +140,10 @@ class BridgeRuntime:
             "locator.set_many": lambda p: self.locators.set_many(song(), p),
             "locator.status": lambda p: self.locators.status(song()),
             "locator.clear_all": lambda p: self.locators.clear_all(song(), p),
-            "automation.record": lambda p: self.automation.record(song(), p),
+            "automation.record": lambda p: self._exclusive(self.meter, "meter capture", self.automation.record, p),
+            "meter.capture": lambda p: self._exclusive(self.automation, "automation recording", self.meter.capture, p),
+            "meter.status": lambda p: self.meter.status(song()),
+            "meter.cancel": lambda p: self.meter.cancel(song()),
             "automation.status": lambda p: self.automation.status(song()),
             "automation.cancel": lambda p: self.automation.cancel(song()),
             "automation.clear": lambda p: automation.clear(song(), p),

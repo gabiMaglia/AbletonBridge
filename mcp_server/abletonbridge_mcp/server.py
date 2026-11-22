@@ -409,6 +409,69 @@ def live_automation_clear(
         track=track, target=target, start_beat=start_beat, end_beat=end_beat))
 
 
+# --- T-017: lectura de medidores (solo lectura, sin record ni Automation Arm) ---
+
+METER_FINAL_PHASES = ("done", "error", "cancelled")
+
+
+def live_meter_capture(
+    client: BridgeClient,
+    start_beat: float,
+    end_beat: float,
+    tracks: Any = "all",
+    include_returns: bool = True,
+    include_master: bool = True,
+    bin_bars: int = 8,
+    calibration: Optional[Dict[str, Any]] = None,
+    preroll_beats: float = 2.0,
+    poll_interval: float = 1.0,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> Dict[str, Any]:
+    """
+    Mide picos y nivel (medidores de salida del LOM) por pista/return/master mientras Live reproduce
+    [start_beat, end_beat). Solo lectura. Devuelve por target: fader_display, peak/rms crudos y en dB
+    (estimado: `db_mapping` dice si esta calibrado), bins por `bin_bars` compases y gain_reduction
+    ("unavailable" si el LOM no lo expone). `calibration` = {points: [[raw, dbfs], ...]}.
+    Encola `meter.capture` y sondea `meter.status`; al vencer el tope cancela y restaura el transporte.
+    """
+    if start_beat < 0 or end_beat <= start_beat:
+        raise ValueError("need 0 <= start_beat < end_beat")
+    if preroll_beats < 0:
+        raise ValueError("preroll_beats must be >= 0")
+    queued = client.send_request("meter.capture", _compact(
+        start_beat=start_beat, end_beat=end_beat, tracks=tracks, include_returns=include_returns,
+        include_master=include_master, bin_bars=bin_bars, calibration=calibration,
+        preroll_beats=preroll_beats))
+    tempo = float(queued.get("tempo") or 120.0)
+    budget = (end_beat - start_beat + preroll_beats) * 60.0 / tempo + AUTOMATION_TIMEOUT_MARGIN_S
+    deadline = clock() + budget
+    while True:
+        status = client.send_request("meter.status", {})
+        if status.get("phase") in METER_FINAL_PHASES:
+            return status
+        if clock() >= deadline:
+            try:
+                client.send_request("meter.cancel", {})
+            except BridgeError:
+                pass
+            raise BridgeTimeoutError(
+                f"meter capture did not finish within {budget:g}s (phase {status.get('phase')!r}); "
+                "it was cancelled and the transport restored"
+            )
+        sleep(poll_interval)
+
+
+def live_meter_status(client: BridgeClient) -> Dict[str, Any]:
+    """Estado/resultado parcial de la captura de medidores en curso (o la ultima)."""
+    return client.send_request("meter.status", {})
+
+
+def live_meter_cancel(client: BridgeClient) -> Dict[str, Any]:
+    """Cancela la captura de medidores y restaura transporte y playhead."""
+    return client.send_request("meter.cancel", {})
+
+
 # --- Spikes temporales T-002c (automatizacion en Arrangement) ---
 
 
