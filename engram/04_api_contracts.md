@@ -233,3 +233,39 @@ VERIFICAR EN LIVE: forma de `Live.Clip.MidiNoteSpecification(pitch,start_time,du
 `add_new_notes(tuple)`; `insert_device("Operator"/"Auto Filter", idx)` (nombres y que no falle); nombres
 de parámetros de Auto Filter (se reportan); `song.record_mode` como arm de automation en Arrangement;
 `song.re_enable_automation_enabled`/`arrangement_overdub`/`session_automation_record` (solo lectura).
+
+### Ronda 2 — T-002d (arm, audio, devices, Simpler)
+
+Mismas reglas (código fijo, solo `SPIKE-*`, pasos `{ok,error}`, `spike.cleanup` borra también estas pistas).
+Paths de audio: absolutos, existentes, extensión `.wav/.aif/.aiff/.mp3/.flac`; si no, `{ok:false, error:"invalid path"}` sin tocar Live.
+
+**`live_spike_automation_arm`** → `spike.automation_arm` · `{ enable: bool=true }`
+Setea `song.session_automation_record`. Retorno: `{ ok, error, before, after }`.
+
+**`live_spike_automation_record_start`** ahora acepta `arm: bool=true`: prende `session_automation_record` antes de grabar
+y lo restaura al valor previo al terminar (done/error) o en `spike.cleanup`. Paso nuevo en `steps`: `arm`.
+
+**`live_spike_audio_clip`** → `spike.audio_clip` · `{ path, position_beats: float=0.0 }`
+Pista de audio `SPIKE-AUDIO`; `create_audio_clip(path, pos)` en `pos` (base), `pos+16` (chop 1 beat:
+loop_start/end y start/end_marker 1.0→2.0, `looping=True`) y `pos+20` (`warp_mode=6` Complex Pro, `pitch_coarse=-2`).
+Retorno: `{ ok, track_index, complex_pro_mode_value, clips{base,chop,complex}:{is_audio_clip,file_path,length,start_time,end_time,
+warping,warp_mode,warp_markers[{beat_time,sample_time}],start_marker,end_marker,loop_start,loop_end,looping,gain,pitch_coarse}, steps }`.
+Un campo ilegible se reporta como `"unavailable: <Error>"`.
+
+**`live_spike_devices`** → `spike.devices` · `{}`
+Pista de audio `SPIKE-DEVICES` con EQ Eight, Saturator, Compressor, Drum Buss, Utility (en ese orden) y luego Drum Rack.
+Retorno: `{ ok, track_index, devices[{class_name,name,parameters[{name,original_name?,min,max,default_value?(solo no cuantizados),
+is_quantized,value_items?(cuantizados),value,str_for_value}]}], set_params{"Saturator.Drive":{target,value,str_for_value},
+"Utility.Gain":{...}}, drum_rack{ok,error,class_name?}, steps }`.
+
+**`live_spike_simpler_slice`** → `spike.simpler_slice` · `{ loop_path, oneshot_path }`
+`SPIKE-SIMPLER-SLICE`: Simpler + `replace_sample(loop)`, `playback_mode=2`, lectura del sample, `clear_slices` + 4 `insert_slice`
+equiespaciadas (frames), clip MIDI de 4 beats con notas 36..39. `SPIKE-SIMPLER-ONESHOT`: Simpler + `replace_sample(oneshot)`,
+`playback_mode=1`, clip con pitch 60 x4.
+Retorno: `{ ok, slice{track_index,playback_mode_readback,sample{file_path,length,sample_rate,slicing_style,slicing_sensitivity,
+slicing_beat_division,slices_count,first_slices[<=16]},slices_after[]}, oneshot{track_index,playback_mode_readback,sample,parameters[]}, steps }`.
+
+VERIFICAR EN LIVE: valores de `warp_mode` (6 = Complex Pro) y `playback_mode` (0/1/2); forma de `warp_markers`; que
+`create_audio_clip` devuelva el Clip; orden/validez al setear loop/markers y `looping` en clip de Arrangement; `insert_device`
+devuelve Device; `original_name`/`value_items`/`str_for_value`; `Sample.sample_rate`, `slicing_*`, `slices`; `clear_slices`
++ `insert_slice` en frame 0; notas 36..39 disparan slices y 60 es la raíz del one-shot; `insert_device("Drum Rack")`.

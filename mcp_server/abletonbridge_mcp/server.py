@@ -44,10 +44,10 @@ def live_spike_automation_session(client: BridgeClient, bars: int = 4) -> Dict[s
 
 
 def live_spike_automation_record_start(
-    client: BridgeClient, start_beat: float = 32.0, bars: int = 2
+    client: BridgeClient, start_beat: float = 32.0, bars: int = 2, arm: bool = True
 ) -> Dict[str, Any]:
     return client.send_request(
-        "spike.automation_record_start", {"start_beat": start_beat, "bars": bars}
+        "spike.automation_record_start", {"start_beat": start_beat, "bars": bars, "arm": arm}
     )
 
 
@@ -57,3 +57,30 @@ def live_spike_automation_record_status(client: BridgeClient) -> Dict[str, Any]:
 
 def live_spike_cleanup(client: BridgeClient) -> Dict[str, Any]:
     return client.send_request("spike.cleanup", {})
+
+
+# --- Spikes temporales T-002d (ronda 2) ---
+
+
+def live_spike_automation_arm(client: BridgeClient, enable: bool = True) -> Dict[str, Any]:
+    return client.send_request("spike.automation_arm", {"enable": enable})
+
+
+def live_spike_audio_clip(
+    client: BridgeClient, path: str, position_beats: float = 0.0
+) -> Dict[str, Any]:
+    return client.send_request(
+        "spike.audio_clip", {"path": path, "position_beats": position_beats}
+    )
+
+
+def live_spike_devices(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("spike.devices", {})
+
+
+def live_spike_simpler_slice(
+    client: BridgeClient, loop_path: str, oneshot_path: str
+) -> Dict[str, Any]:
+    return client.send_request(
+        "spike.simpler_slice", {"loop_path": loop_path, "oneshot_path": oneshot_path}
+    )

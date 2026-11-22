@@ -71,6 +71,11 @@ def _first_non_device_on(device: Any) -> Any:
     return None
 
 
+def _bool(params: Dict[str, Any], key: str, default: bool) -> bool:
+    value = params.get(key, default)
+    return value if isinstance(value, bool) else default
+
+
 def _new_midi_track(song: Any, name: str) -> Tuple[int, Any]:
     song.create_midi_track(-1)
     index = len(song.tracks) - 1
@@ -207,6 +212,17 @@ class RecordSpike:
         self._length = 0.0
         self._deadline = 0.0
         self.trace: List[Dict[str, Any]] = []
+        self._prev_arm: Optional[bool] = None
+
+    def restore_arm(self, song: Any) -> None:
+        """Devuelve Automation Arm a como estaba antes del spike (una sola vez)."""
+        if self._prev_arm is None:
+            return
+        prev, self._prev_arm = self._prev_arm, None
+        try:
+            song.session_automation_record = prev
+        except Exception as exc:  # noqa: BLE001
+            self.errors.append(f"restore_arm: {type(exc).__name__}: {exc}")
 
     def reset(self) -> None:
         self._reset()
@@ -235,6 +251,13 @@ class RecordSpike:
         op = self._op_param()
         self._op_param_name = op.name if op is not None else None
         out["operator_param"] = self._op_param_name
+
+        def arm() -> None:
+            self._prev_arm = bool(song.session_automation_record)
+            song.session_automation_record = True
+
+        if _bool(params, "arm", True):
+            _step(steps, "arm", arm)
 
         def transport() -> None:
             # Si el transporte ya corria, current_song_time arrastra una
@@ -272,6 +295,7 @@ class RecordSpike:
                 fn()
             except Exception as exc:  # noqa: BLE001
                 self.errors.append(f"{type(exc).__name__}: {exc}")
+        self.restore_arm(song)
 
     def tick(self) -> None:
         if self.phase != "running":
@@ -322,6 +346,19 @@ class RecordSpike:
         return out
 
 
+def automation_arm(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Prende/apaga Automation Arm (song.session_automation_record) y lee de vuelta."""
+    enable = _bool(params, "enable", True)
+    out: Dict[str, Any] = {"ok": True, "error": None, "before": None, "after": None}
+    try:
+        out["before"] = bool(song.session_automation_record)
+        song.session_automation_record = enable
+        out["after"] = bool(song.session_automation_record)
+    except Exception as exc:  # noqa: BLE001
+        out["ok"], out["error"] = False, f"{type(exc).__name__}: {exc}"
+    return out
+
+
 def _safe(fn: Callable[[], Any]) -> Any:
     try:
         return fn()
@@ -332,6 +369,7 @@ def _safe(fn: Callable[[], Any]) -> Any:
 def cleanup(song: Any, recorder: RecordSpike) -> Dict[str, Any]:
     """Frena el spike y borra SOLO pistas con prefijo SPIKE- (en reversa)."""
     errors: List[str] = []
+    recorder.restore_arm(song)
     recorder.reset()
     for fn in (song.stop_playing, lambda: setattr(song, "record_mode", False)):
         try:

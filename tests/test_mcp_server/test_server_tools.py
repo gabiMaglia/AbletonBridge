@@ -147,7 +147,30 @@ def test_spike_tools_send_expected_cmds() -> None:
     s.live_spike_cleanup(c)
     assert sent == [
         ("spike.automation_session", {"bars": 3}),
-        ("spike.automation_record_start", {"start_beat": 16.0, "bars": 1}),
+        ("spike.automation_record_start", {"start_beat": 16.0, "bars": 1, "arm": True}),
         ("spike.automation_record_status", {}),
         ("spike.cleanup", {}),
+    ]
+
+
+def test_spike_round2_tools_send_expected_cmds() -> None:
+    from mcp_server.abletonbridge_mcp import server as s
+
+    sent = []
+
+    class C:
+        def send_request(self, cmd, params):
+            sent.append((cmd, params))
+            return {}
+
+    c = C()
+    s.live_spike_automation_arm(c, enable=True)
+    s.live_spike_audio_clip(c, path="C:/a.wav", position_beats=8.0)
+    s.live_spike_devices(c)
+    s.live_spike_simpler_slice(c, loop_path="L.wav", oneshot_path="O.wav")
+    assert sent == [
+        ("spike.automation_arm", {"enable": True}),
+        ("spike.audio_clip", {"path": "C:/a.wav", "position_beats": 8.0}),
+        ("spike.devices", {}),
+        ("spike.simpler_slice", {"loop_path": "L.wav", "oneshot_path": "O.wav"}),
     ]

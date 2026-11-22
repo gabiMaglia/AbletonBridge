@@ -292,3 +292,62 @@ def test_cleanup_deletes_only_spike_tracks_and_stops(live) -> None:
     assert sorted(out["deleted"]) == ["SPIKE-AUTO-RECORD", "SPIKE-AUTO-SESSION"]
     assert song.record_mode is False and song.is_playing is False
     assert r.status(song)["phase"] == "idle"
+
+
+def test_automation_arm_sets_and_reports_readback(live) -> None:
+    song = Song()
+    out = spikes.automation_arm(song, {"enable": True})
+    assert out == {"ok": True, "error": None, "before": False, "after": True}
+    assert song.session_automation_record is True
+    assert spikes.automation_arm(song, {"enable": False})["after"] is False
+
+
+def test_automation_arm_reports_failure_without_raising(live) -> None:
+    class Bad:
+        @property
+        def session_automation_record(self):
+            return False
+
+        @session_automation_record.setter
+        def session_automation_record(self, v):
+            raise RuntimeError("read only")
+
+    out = spikes.automation_arm(Bad(), {"enable": True})
+    assert out["ok"] is False and "read only" in out["error"]
+
+
+def test_record_start_arms_by_default_and_restores_on_done(live) -> None:
+    song = Song()
+    r = spikes.RecordSpike()
+    r.start(song, live, {"start_beat": 32.0, "bars": 1})
+    assert song.session_automation_record is True
+    song.current_song_time = 36.5
+    r.tick()
+    assert r.status(song)["phase"] == "done"
+    assert song.session_automation_record is False
+
+
+def test_record_start_arm_false_leaves_flag_alone(live) -> None:
+    song = Song()
+    r = spikes.RecordSpike()
+    r.start(song, live, {"arm": False})
+    assert song.session_automation_record is False
+
+
+def test_record_restores_previous_arm_value_on_error(live) -> None:
+    song = Song()
+    song.session_automation_record = True
+    r = spikes.RecordSpike()
+    r.start(song, live, {"bars": 1})
+    song.tracks[1].mixer_device = None
+    r.tick()
+    assert r.status(song)["phase"] == "error"
+    assert song.session_automation_record is True
+
+
+def test_cleanup_restores_arm(live) -> None:
+    song = Song()
+    r = spikes.RecordSpike()
+    r.start(song, live, {})
+    spikes.cleanup(song, r)
+    assert song.session_automation_record is False

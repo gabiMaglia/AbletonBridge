@@ -49,3 +49,6 @@
 
 ### 2026-11-22 nerv-orquestador->nerv-desktop T-002c (spike automatizacion Arrangement)
 - Agregados spikes.py (automation_session, RecordSpike state machine via _tick, cleanup) + 4 tools MCP + contrato "Spikes (temporales)". Tests 70 verdes. En revision QA. Sin probar en Live real (VERIFICAR EN LIVE: add_new_notes, insert_device, record_mode).
+
+### 2026-11-22 nerv-orquestador->nerv-desktop T-002d (spikes ronda 2)
+- Agregados spikes_media.py (audio_clip, devices, simpler_slice), automation_arm + arm en record_start (restaura al terminar), 4 tools MCP + contrato. Tests 102 verdes. En revision QA. Sin probar en Live real (ver lista VERIFICAR EN LIVE en contratos).

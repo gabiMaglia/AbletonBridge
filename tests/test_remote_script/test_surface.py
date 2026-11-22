@@ -125,5 +125,7 @@ def test_tick_survives_spike_tick_exception(instance) -> None:
 
 def test_spike_handlers_registered(instance) -> None:
     for cmd in ("spike.automation_session", "spike.automation_record_start",
-                "spike.automation_record_status", "spike.cleanup"):
+                "spike.automation_record_status", "spike.cleanup",
+                "spike.automation_arm", "spike.audio_clip", "spike.devices",
+                "spike.simpler_slice"):
         assert cmd in instance.server._handlers
