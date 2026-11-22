@@ -140,7 +140,9 @@ def test_production_handlers_registered(instance) -> None:
                 "clip.create_midi", "clip.delete_range", "device.insert", "device.set_param", "simpler.load",
                 "locator.set", "locator.set_many", "locator.status", "locator.clear_all",
                 "track.delete", "track.set_send", "return.list", "return.set_mixer",
-                "return.device_insert", "return.device_set_param", "return.create"):
+                "return.device_insert", "return.device_set_param", "return.create",
+                "master.device_insert", "master.device_set_param", "master.set_mixer",
+                "compressor.set_sidechain"):
         assert cmd in instance.server._handlers
 
 

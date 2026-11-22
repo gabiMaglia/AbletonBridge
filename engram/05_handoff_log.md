@@ -67,3 +67,6 @@
 
 ### 2026-11-22 nerv-orquestador->nerv-desktop T-003b (largo exacto de clips de audio)
 - `clip.place_audio` reescrito: tiles parciales / loop_* via slot de Session scratch + `duplicate_clip_to_arrangement` (sin crop), re-busqueda por start_time, verificacion de span (tol 0.01), `method`/`warping` por clip, `one_shot` (sin warp, 1 copia, sin trim). Nuevo `clip.delete_range` + tool `live_clip_delete_range`. Tests 211 verdes (fakes modelan span fijo en Arrangement y span=loop al duplicar). En revision QA. Re-probar en Live (VERIFICAR EN LIVE T-003b en contrato).
+
+### 2026-11-22 nerv-orquestador->nerv-desktop T-010 (envelopes, master, sidechain)
+- `clip.place_audio` / `clip.create_midi` aceptan `envelopes` + `points_span` (tile|range): todo tile pasa por Session y se escriben rampas de 0.25 beat con `create_automation_envelope`/`insert_step`; reporte por tile. Nuevo `_raw_for_display` (bisección por unidad, kHz/s normalizados, display creciente o decreciente) usado por `device.set_param`/`return.device_set_param`/`master.device_set_param` (`display`) y por puntos `{"display": n}`. Nuevos cmds `master.device_insert`, `master.device_set_param`, `master.set_mixer`, `compressor.set_sidechain` + 4 tools MCP. Tests 261 verdes. En revision QA. Sin probar en Live real (VERIFICAR EN LIVE T-010 en contrato). No existe engram/plans/T-010.md (plan gate sin estampar).

@@ -12,7 +12,7 @@ import math
 import os
 import re
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from . import errors, lom_read
 from .errors import CommandError
@@ -141,22 +141,39 @@ def parse_db(text: Any) -> Optional[float]:
     return float(m.group(0).replace(",", ".")) if m else None
 
 
+def parse_display(text: Any) -> Optional[float]:
+    """Como parse_db pero normaliza unidades: kHz -> Hz, s -> ms. None si no es un numero."""
+    v = parse_db(text)
+    if v is None or math.isinf(v) or not isinstance(text, str):
+        return v
+    t = text.lower()
+    if re.search(r"\d\s*/\s*\d", t):  # divisiones musicales ("1/4"): no hay escala numerica
+        return None
+    if re.search(r"\d\s*khz", t):
+        return v * 1000.0
+    if re.search(r"\d\s*s\b", t):  # "1.5 s"; "200 ms" no matchea
+        return v * 1000.0
+    return v
+
+
 def find_raw_for_db(lo: float, hi: float, display_of: Callable[[float], Any],
-                    target: float, tol: float = DB_TOLERANCE) -> Tuple[float, bool]:
+                    target: float, tol: float = DB_TOLERANCE,
+                    parse: Callable[[Any], Optional[float]] = parse_db) -> Tuple[float, bool]:
     """
-    Biseccion sobre [lo, hi] (display monotono creciente) buscando el valor crudo
-    cuyo display se acerca a `target` dB. Devuelve (crudo, dentro_de_tolerancia).
+    Biseccion sobre [lo, hi] (display monotono, creciente o decreciente) buscando el valor
+    crudo cuyo display se acerca a `target`. Devuelve (crudo, dentro_de_tolerancia).
     """
     def db(raw: float) -> float:
-        d = parse_db(display_of(raw))
+        d = parse(display_of(raw))
         if d is None:
-            raise ValueError("display is not parseable as dB")
+            raise ValueError("display is not parseable as a number")
         return _NEG_INF if d == -math.inf else d
 
     best, best_err = lo, abs(db(lo) - target)
     err_hi = abs(db(hi) - target)
     if err_hi < best_err:
         best, best_err = hi, err_hi
+    increasing = db(hi) >= db(lo)
     a, b = lo, hi
     for _ in range(48):
         if best_err <= tol + 1e-9:
@@ -166,11 +183,35 @@ def find_raw_for_db(lo: float, hi: float, display_of: Callable[[float], Any],
         err = abs(d - target)
         if err < best_err:
             best, best_err = mid, err
-        if d < target:
+        if (d < target) == increasing:
             a = mid
         else:
             b = mid
     return best, best_err <= tol + 1e-9
+
+
+DISPLAY_TOL_FRAC = 0.005  # tolerancia de display por unidad: 0.5% del rango del parametro
+
+
+def _raw_for_display(param: Any, target: float) -> Tuple[float, bool]:
+    """Crudo de `param` cuyo str_for_value se acerca a `target` (unidad del display). (crudo, within)."""
+    lo, hi = float(param.min), float(param.max)
+
+    def shown(raw: float) -> Any:
+        return param.str_for_value(raw)
+
+    try:
+        d_lo, d_hi = parse_display(shown(lo)), parse_display(shown(hi))
+        if d_lo is None or d_hi is None:
+            raise ValueError("unparseable")
+        raw, _ = find_raw_for_db(lo, hi, shown, target, tol=1e-9, parse=parse_display)
+        got = parse_display(shown(raw))
+    except ValueError:
+        raise _bad(f"parameter {param.name!r}: display {shown(lo)!r} is not numeric, "
+                   "so a value by unit cannot be resolved (use raw value)") from None
+    span = abs(d_hi - d_lo)
+    tol = DISPLAY_TOL_FRAC * span if math.isfinite(span) else DB_TOLERANCE
+    return raw, got is not None and abs(got - target) <= tol
 
 
 def _db_arg(params: Dict[str, Any], key: str) -> Optional[Tuple[Optional[float], bool]]:
@@ -338,6 +379,128 @@ def return_create(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     return {"index": idx, "name": str(song.return_tracks[idx].name)}
 
 
+# --- envelopes de clip (T-010) -------------------------------------------------
+
+ENV_STEP = 0.25  # beats por paso de la rampa
+MAX_ENVELOPES = 16
+MAX_ENV_POINTS = 256
+POINTS_SPANS = ("tile", "range")
+
+
+def _env_param(track: Any, target: Any) -> Tuple[Any, Any]:
+    """(parametro, etiqueta del target) para un target de envelope sobre `track`."""
+    mixer = track.mixer_device
+    if target == "volume":
+        return mixer.volume, "volume"
+    if target == "pan":
+        return mixer.panning, "pan"
+    if isinstance(target, dict) and set(target) == {"send"}:
+        sends = list(mixer.sends)
+        idx = target["send"]
+        if not _is_int(idx) or not 0 <= idx < len(sends):
+            raise _bad(f"target.send must be an integer in [0, {len(sends) - 1}]")
+        return sends[idx], {"send": idx}
+    if isinstance(target, dict) and set(target) == {"device", "param"}:
+        _, dev = _device(track, {"device": target["device"]})
+        name = target["param"]
+        param = next((p for p in dev.parameters if p.name == name), None) if isinstance(name, str) else None
+        if param is None:
+            raise _bad(f"target.param {name!r} not found on the device (exact API name)")
+        return param, {"device": target["device"], "param": name}
+    raise _bad('target must be "volume", "pan", {"send": i} or {"device": index|name, "param": name}')
+
+
+def _env_points(param: Any, raw_points: Any, label: str, notes: List[str]) -> List[Tuple[float, float]]:
+    if not isinstance(raw_points, list) or not 1 <= len(raw_points) <= MAX_ENV_POINTS:
+        raise _bad(f"{label}: points must be a list of 1..{MAX_ENV_POINTS} [time, value] pairs")
+    lo, hi = float(param.min), float(param.max)
+    cache: Dict[float, float] = {}
+    out: List[Tuple[float, float]] = []
+    for i, pt in enumerate(raw_points):
+        if not isinstance(pt, (list, tuple)) or len(pt) != 2:
+            raise _bad(f"{label}: points[{i}] must be [time, value]")
+        t, v = pt
+        if not _is_num(t) or t < 0:
+            raise _bad(f"{label}: points[{i}] time must be a number >= 0")
+        if out and t <= out[-1][0]:
+            raise _bad(f"{label}: point times must be strictly increasing")
+        if isinstance(v, dict):
+            target = v.get("display")
+            if set(v) != {"display"} or not _is_num(target):
+                raise _bad(f'{label}: points[{i}] value must be a number or {{"display": number}}')
+            if target not in cache:
+                raw, within = _raw_for_display(param, float(target))
+                cache[target] = raw
+                if not within:
+                    notes.append(f"{label}: display {target} not reachable; closest is "
+                                 f"{param.str_for_value(raw)}")
+            value = cache[target]
+        elif _is_num(v) and lo - EPS <= v <= hi + EPS:
+            value = min(max(float(v), lo), hi)
+        else:
+            raise _bad(f"{label}: points[{i}] value must be a number in [{lo}, {hi}] or "
+                       '{"display": number}')
+        out.append((float(t), value))
+    return out
+
+
+def _parse_envelopes(track: Any, params: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[str], str]:
+    """Valida TODO antes de tocar el set. (specs, avisos, points_span)."""
+    mode = params.get("points_span", "tile")
+    if mode not in POINTS_SPANS:
+        raise _bad(f"points_span must be one of {POINTS_SPANS}")
+    raw = params.get("envelopes")
+    if raw is None:
+        return [], [], mode
+    if not isinstance(raw, list) or not 1 <= len(raw) <= MAX_ENVELOPES:
+        raise _bad(f"envelopes must be a list of 1..{MAX_ENVELOPES} objects")
+    specs: List[Dict[str, Any]] = []
+    notes: List[str] = []
+    for i, env in enumerate(raw):
+        if not isinstance(env, dict) or "target" not in env:
+            raise _bad(f"envelopes[{i}] must be an object with target and points")
+        param, label = _env_param(track, env["target"])
+        specs.append({"label": label, "param": param, "param_name": str(param.name),
+                      "points": _env_points(param, env.get("points"), f"envelopes[{i}]", notes)})
+    return specs, notes, mode
+
+
+def _interp(points: List[Tuple[float, float]], t: float) -> float:
+    """Valor de la poligonal en `t`; fuera de los puntos se sostiene el primero/ultimo."""
+    if t <= points[0][0]:
+        return points[0][1]
+    for (t0, v0), (t1, v1) in zip(points, points[1:]):
+        if t <= t1:
+            return v0 + (v1 - v0) * (t - t0) / (t1 - t0)
+    return points[-1][1]
+
+
+def _write_envelopes(clip: Any, specs: List[Dict[str, Any]], offset: float, required: float,
+                     mode: str) -> List[Dict[str, Any]]:
+    """
+    Escribe cada envelope en el clip de SESSION como rampa de pasos de ENV_STEP beats. En modo
+    "range" el tile muestrea la poligonal desplazada `offset` (su inicio dentro del rango).
+    Un envelope que falla se reporta; no aborta el resto.
+    """
+    reports: List[Dict[str, Any]] = []
+    count = max(1, int(math.ceil(required / ENV_STEP - EPS)))
+    shift = offset if mode == "range" else 0.0
+    for spec in specs:
+        entry: Dict[str, Any] = {"target": spec["label"], "param": spec["param_name"]}
+        try:
+            env = clip.create_automation_envelope(spec["param"])
+            if env is None:  # VERIFICAR EN LIVE: create_* puede no devolver el envelope
+                env = clip.automation_envelope(spec["param"])
+            for i in range(count):
+                s = i * ENV_STEP
+                env.insert_step(s, min(ENV_STEP, required - s), _interp(spec["points"], s + shift))
+            entry.update(ok=True, steps=count)
+        except Exception as exc:  # noqa: BLE001 - un envelope roto no frena a los demas
+            entry.update(ok=False, error=f"{type(exc).__name__}: {exc}")
+        reports.append(entry)
+    return reports
+
+
 # --- clip.place_audio ----------------------------------------------------
 
 
@@ -421,21 +584,32 @@ def _apply_clip_settings(clip: Any, key: str, warp_mode: Optional[int], pitch: O
         _step(steps, f"{key}_pitch", lambda: setattr(clip, "pitch_coarse", pitch))
 
 
-def _session_tile(track: Any, scratch: _Scratch, path: str, pos: float, required: float,
+def _session_tile(track: Any, scratch: _Scratch, path: str, pos: float,
+                  required: Union[float, Callable[[Any], float]],
                   section_start: Optional[float], key: str, steps: Dict[str, Any],
-                  setup: Callable[[Any], None]) -> bool:
+                  setup: Callable[[Any], None],
+                  finish: Optional[Callable[[Any, float], None]] = None) -> Tuple[bool, float]:
     """
     Arma el tile en el slot scratch (loop == `required`) y lo duplica al Arrangement en `pos`.
-    Devuelve False si no se pudo crear/duplicar. El clip de Arrangement se re-busca aparte.
+    `required` puede ser una funcion del clip de Session (largo natural recortado a lo que
+    falta). `finish(clip, required)` corre con el loop ya fijado y antes de duplicar (envelopes).
+    Devuelve (ok, required). El clip de Arrangement se re-busca aparte.
     """
     ok, slot = _step(steps, f"{key}_scratch", scratch.acquire)
     if not ok:
-        return False
+        return False, 0.0
     ok, _ = _step(steps, f"{key}_session_create", lambda: slot.create_audio_clip(path))
     if not ok:
-        return False
+        return False, 0.0
     clip = slot.clip  # nunca se confia en lo que devuelve create_audio_clip
     setup(clip)
+    if callable(required):
+        resolve = required
+        ok, value = _step(steps, f"{key}_natural", lambda: float(resolve(clip)))
+        if not ok or value <= EPS:
+            _step(steps, f"{key}_scratch_clear", lambda: slot.delete_clip())
+            return False, 0.0
+        required = value
     base = section_start
     if base is None:
         base = lom_read.safe(lambda: float(clip.start_marker))
@@ -444,9 +618,11 @@ def _session_tile(track: Any, scratch: _Scratch, path: str, pos: float, required
     _step(steps, f"{key}_loop", lambda: _set_range(clip, "loop_start", "loop_end", base, base + required))
     _step(steps, f"{key}_markers", lambda: _set_range(clip, "start_marker", "end_marker", base, base + required))
     _step(steps, f"{key}_looping", lambda: setattr(clip, "looping", True))
+    if finish is not None:
+        finish(clip, required)
     dup_ok, _ = _step(steps, f"{key}_duplicate", lambda: track.duplicate_clip_to_arrangement(clip, pos))
     _step(steps, f"{key}_scratch_clear", lambda: slot.delete_clip())
-    return dup_ok
+    return dup_ok, required
 
 
 def _place_one_shot(song: Any, track: Any, idx: int, path: str, start: float,
@@ -512,9 +688,12 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
         raise _bad("loop_start and loop_end must be given together")
     if loop_start is not None and loop_end <= loop_start:
         raise _bad("loop_end must be > loop_start")
+    env_specs, env_notes, env_mode = _parse_envelopes(track, params)
     if one_shot:
         if loop_start is not None:
             raise _bad("one_shot cannot be combined with loop_start/loop_end")
+        if env_specs:
+            raise _bad("one_shot cannot be combined with envelopes (they need the Session path)")
         return _place_one_shot(song, track, idx, path, start, total, pitch, gain_db)
 
     steps: Dict[str, Any] = {}
@@ -526,6 +705,17 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     scratch = _Scratch(song, track)
     pos, remaining, n = start, total, 0
     trim_failed = False
+    env_failed = False
+    warnings.extend(env_notes)
+    env_reports: Dict[str, List[Dict[str, Any]]] = {}
+
+    def finish_for(key: str, tile_pos: float) -> Optional[Callable[[Any, float], None]]:
+        if not env_specs:
+            return None
+
+        def run(clip: Any, required: float) -> None:
+            env_reports[key] = _write_envelopes(clip, env_specs, tile_pos - start, required, env_mode)
+        return run
 
     def setup(key: str) -> Callable[[Any], None]:
         def run(clip: Any) -> None:
@@ -541,7 +731,13 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
             method = "session_duplicate"
             if section is not None:
                 required = min(section, remaining)
-                built = _session_tile(track, scratch, path, pos, required, loop_start, key, steps, setup(key))
+                built, _ = _session_tile(track, scratch, path, pos, required, loop_start, key, steps,
+                                         setup(key), finish_for(key, pos))
+            elif env_specs:
+                # Con envelopes TODO tile pasa por Session (los de Arrangement no se pueden escribir)
+                left = remaining
+                built, required = _session_tile(track, scratch, path, pos, lambda c: min(float(c.length), left),
+                                                None, key, steps, setup(key), finish_for(key, pos))
             else:
                 ok, clip = _step(steps, f"{key}_create", lambda: _new_audio_clip(track, path, pos))
                 if not ok:
@@ -565,7 +761,7 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
                         warnings.append(f"{key}: could not discard the full-length clip; stopped")
                         trim_failed = True
                         break
-                    built = _session_tile(track, scratch, path, pos, required, None, key, steps, setup(key))
+                    built, _ = _session_tile(track, scratch, path, pos, required, None, key, steps, setup(key))
             if not built:
                 warnings.append(f"{key}: session-slot build failed; see steps")
                 trim_failed = True
@@ -576,6 +772,12 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
                 trim_failed = True
                 break
             clips.append(_clip_summary(placed, method))
+            if key in env_reports:
+                clips[-1]["envelopes"] = env_reports[key]
+                for e in env_reports[key]:
+                    if not e["ok"]:
+                        env_failed = True
+                        warnings.append(f"{key}: envelope {e['target']} failed: {e['error']}")
             actual = _span(placed)
             if actual is None or abs(actual - required) > SPAN_TOL:
                 warnings.append(f"{key}: requested {required} beats but arrangement span is "
@@ -590,7 +792,7 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     if remaining > EPS and n >= MAX_COPIES:
         warnings.append(f"stopped after {MAX_COPIES} copies")
     covered = total - max(remaining, 0.0)
-    ok_all = bool(clips) and remaining <= EPS and not trim_failed
+    ok_all = bool(clips) and remaining <= EPS and not trim_failed and not env_failed
     out: Dict[str, Any] = {
         "ok": ok_all, "track": idx, "clips": clips,
         "covered_beats": covered, "warnings": warnings, "steps": steps,
@@ -695,6 +897,10 @@ def clip_create_midi(song: Any, live: Any, params: Dict[str, Any]) -> Dict[str, 
     start = _req_num(params, "start_beat", lo=0.0)
     length = _req_num(params, "length_beats", positive=True)
     notes = _notes(params)
+    env_specs, env_notes, env_mode = _parse_envelopes(track, params)
+    if env_specs:
+        return _create_midi_with_envelopes(song, live, idx, track, start, length, notes,
+                                           env_specs, env_notes, env_mode)
 
     # VERIFICAR EN LIVE: orden de argumentos de Track.create_midi_clip (start_time, length)
     clip = track.create_midi_clip(start, length)
@@ -702,12 +908,20 @@ def clip_create_midi(song: Any, live: Any, params: Dict[str, Any]) -> Dict[str, 
         clip = _find_arrangement_clip(track, start)
     if clip is None:
         raise RuntimeError("clip not found after create_midi_clip")
+    _add_notes(live, clip, notes)
+    return _midi_summary(idx, clip, notes)
+
+
+def _add_notes(live: Any, clip: Any, notes: List[Dict[str, float]]) -> None:
     if notes:
         spec = live.Clip.MidiNoteSpecification
         clip.add_new_notes(tuple(
             spec(pitch=n["pitch"], start_time=n["start"], duration=n["duration"], velocity=n["velocity"])
             for n in notes
         ))
+
+
+def _midi_summary(idx: int, clip: Any, notes: List[Dict[str, float]]) -> Dict[str, Any]:
     count = lom_read.safe(lambda: len(clip.get_all_notes_extended()))
     return {
         "track": idx,
@@ -717,6 +931,34 @@ def clip_create_midi(song: Any, live: Any, params: Dict[str, Any]) -> Dict[str, 
         "name": lom_read.get(clip, "name"),
         "note_count": count if isinstance(count, int) else len(notes),
     }
+
+
+def _create_midi_with_envelopes(song: Any, live: Any, idx: int, track: Any, start: float, length: float,
+                                notes: List[Dict[str, float]], specs: List[Dict[str, Any]],
+                                notes_warn: List[str], mode: str) -> Dict[str, Any]:
+    """Clip MIDI armado en un slot de Session (notas + envelopes) y duplicado al Arrangement."""
+    steps: Dict[str, Any] = {}
+    scratch = _Scratch(song, track)
+    reports: List[Dict[str, Any]] = []
+    try:
+        ok, slot = _step(steps, "scratch", scratch.acquire)
+        if not ok:
+            raise RuntimeError(f"no scratch slot: {steps['scratch']['error']}")
+        slot.create_clip(length)  # VERIFICAR EN LIVE: ClipSlot.create_clip(length) en track MIDI
+        clip = slot.clip
+        _add_notes(live, clip, notes)
+        reports = _write_envelopes(clip, specs, 0.0, length, mode)
+        track.duplicate_clip_to_arrangement(clip, start)
+        _step(steps, "scratch_clear", lambda: slot.delete_clip())
+    finally:
+        scratch.release(steps)
+    placed = _find_arrangement_clip(track, start)
+    if placed is None:
+        raise RuntimeError("clip not found in arrangement_clips after duplicate_clip_to_arrangement")
+    warnings = list(notes_warn)
+    warnings += [f"envelope {e['target']} failed: {e['error']}" for e in reports if not e["ok"]]
+    return dict(_midi_summary(idx, placed, notes), method="session_duplicate",
+                ok=all(e["ok"] for e in reports), envelopes=reports, warnings=warnings, steps=steps)
 
 
 # --- device.insert / device.set_param / simpler.load -------------------------
@@ -759,17 +1001,25 @@ def return_device_insert(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
 def _set_device_param(track: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     dev_index, dev = _device(track, params)
     name = _name(params, "name")
-    value = params.get("value")
-    if not _is_num(value):
-        raise _bad("value must be a number (raw, see str_for_value for units)")
+    value, display = params.get("value"), params.get("display")
+    if (value is None) == (display is None):
+        raise _bad("give exactly one of value (raw) or display (number in the parameter's unit)")
+    if not _is_num(value if display is None else display):
+        raise _bad("value / display must be a number (value is raw, display is in the unit of str_for_value)")
     param = next((p for p in dev.parameters if p.name == name), None)
     if param is None:
         raise _bad(f"parameter {name!r} not found (exact, case-sensitive API name)")
-    if not float(param.min) - EPS <= value <= float(param.max) + EPS:
-        raise _bad(f"value {value} outside [{param.min}, {param.max}]")
-    param.value = float(value)
+    extra: Dict[str, Any] = {}
+    if display is not None:
+        raw, within = _raw_for_display(param, float(display))
+        param.value = raw
+        extra["within_tolerance"] = within
+    else:
+        if not float(param.min) - EPS <= value <= float(param.max) + EPS:
+            raise _bad(f"value {value} outside [{param.min}, {param.max}]")
+        param.value = float(value)
     return {"device": dev_index, "name": name, "min": float(param.min), "max": float(param.max),
-            **_readback(param)}
+            **_readback(param), **extra}
 
 
 def device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -778,6 +1028,83 @@ def device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
 
 def return_device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     return _set_device_param(_return(song, params)[1], params)
+
+
+# --- master y sidechain (T-010) --------------------------------------------------
+
+
+def master_device_insert(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    return _insert_device(song.master_track, params)
+
+
+def master_device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    return _set_device_param(song.master_track, params)
+
+
+def master_set_mixer(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    vol = _db_arg(params, "volume_db")
+    if vol is None:
+        raise _bad("volume_db is required (number or '-inf')")
+    return {"volume": _set_db(song.master_track.mixer_device.volume, vol)}
+
+
+_TRACK_PREFIX = re.compile(r"^\d+\s*-\s*")
+
+
+def _match_routing(types: List[Any], wanted: str) -> Any:
+    """Tipo de ruteo cuyo display_name es el track pedido (exacto, sin mayusculas, o sin prefijo "N-")."""
+    tiers: List[Callable[[str], bool]] = [
+        lambda n: n == wanted,
+        lambda n: n.lower() == wanted.lower(),
+        lambda n: _TRACK_PREFIX.sub("", n).lower() == wanted.lower(),
+    ]
+    names = [str(t.display_name) for t in types]
+    for tier in tiers:
+        hits = [t for t, n in zip(types, names) if tier(n)]
+        if len(hits) == 1:
+            return hits[0]
+        if len(hits) > 1:
+            raise _bad(f"source_track_name {wanted!r} is ambiguous among routing types {names}")
+    raise _bad(f"no input routing type for {wanted!r}; available: {names}")
+
+
+def compressor_set_sidechain(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    idx, track = _track(song, params)
+    dev_index, dev = _device(track, params)
+    source = _name(params, "source_track_name")
+    if not (hasattr(dev, "available_input_routing_types") and hasattr(dev, "input_routing_type")):
+        raise _bad(f"device {dev.name!r} does not expose input_routing_type / "
+                   "available_input_routing_types (needs a Compressor on Live 11+)")
+    match = _match_routing(list(dev.available_input_routing_types), source)
+    wanted = str(match.display_name)
+
+    steps: Dict[str, Any] = {}
+    warnings: List[str] = []
+    sc_params = [p for p in dev.parameters if "S/C" in p.name]
+    sc_on = next((p for p in sc_params if p.name == "S/C On"), None)
+    routed, _ = _step(steps, "set_input_routing_type", lambda: setattr(dev, "input_routing_type", match))
+    if routed and sc_on is not None:
+        _step(steps, "enable_sidechain", lambda: setattr(sc_on, "value", float(sc_on.max)))
+    elif sc_on is None:
+        warnings.append(f"parameter 'S/C On' not found; sidechain not enabled "
+                        f"(S/C params: {[p.name for p in sc_params]})")
+
+    def names(attr: str) -> Any:
+        return lom_read.safe(lambda: [str(t.display_name) for t in getattr(dev, attr)])
+
+    current = lom_read.safe(lambda: str(dev.input_routing_type.display_name))
+    on = None if sc_on is None else bool(float(sc_on.value) >= 0.5)
+    return {
+        "ok": all(s["ok"] for s in steps.values()) and current == wanted and on is True,
+        "track": idx, "device": dev_index,
+        "input_routing_type": current,
+        "available_input_routing_types": names("available_input_routing_types"),
+        "input_routing_channel": lom_read.safe(lambda: str(dev.input_routing_channel.display_name)),
+        "available_input_routing_channels": names("available_input_routing_channels"),
+        "sidechain_on": on,
+        "sc_params": [dict(name=p.name, **_readback(p)) for p in sc_params],
+        "warnings": warnings, "steps": steps,
+    }
 
 
 def simpler_load(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:

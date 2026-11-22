@@ -152,11 +152,15 @@ def live_clip_place_audio(
     loop_start: Optional[float] = None,
     loop_end: Optional[float] = None,
     one_shot: Optional[bool] = None,
+    envelopes: Optional[List[Dict[str, Any]]] = None,
+    points_span: Optional[str] = None,
 ) -> Dict[str, Any]:
+    """envelopes: [{target, points}] se escriben en cada tile (ver contrato T-010)."""
     return client.send_request("clip.place_audio", _compact(
         track=track, path=path, start_beat=start_beat, length_beats=length_beats,
         warp_mode=warp_mode, pitch_coarse=pitch_coarse, gain_db=gain_db,
-        loop_start=loop_start, loop_end=loop_end, one_shot=one_shot))
+        loop_start=loop_start, loop_end=loop_end, one_shot=one_shot,
+        envelopes=envelopes, points_span=points_span))
 
 
 def live_clip_delete_range(client: BridgeClient, track: int, start_beat: float, end_beat: float) -> Dict[str, Any]:
@@ -170,9 +174,12 @@ def live_clip_create_midi(
     start_beat: float,
     length_beats: float,
     notes: List[Dict[str, Any]],
+    envelopes: Optional[List[Dict[str, Any]]] = None,
+    points_span: Optional[str] = None,
 ) -> Dict[str, Any]:
-    return client.send_request("clip.create_midi", {
-        "track": track, "start_beat": start_beat, "length_beats": length_beats, "notes": notes})
+    return client.send_request("clip.create_midi", _compact(
+        track=track, start_beat=start_beat, length_beats=length_beats, notes=notes,
+        envelopes=envelopes, points_span=points_span))
 
 
 def live_device_insert(client: BridgeClient, track: int, name: str, index: int = -1) -> Dict[str, Any]:
@@ -180,10 +187,12 @@ def live_device_insert(client: BridgeClient, track: int, name: str, index: int =
 
 
 def live_device_set_param(
-    client: BridgeClient, track: int, device: Any, name: str, value: float
+    client: BridgeClient, track: int, device: Any, name: str,
+    value: Optional[float] = None, display: Optional[float] = None,
 ) -> Dict[str, Any]:
-    return client.send_request("device.set_param", {
-        "track": track, "device": device, "name": name, "value": value})
+    """`value` = crudo; `display` = numero en la unidad del parametro (Hz, dB, %). Uno de los dos."""
+    return client.send_request("device.set_param", _compact(
+        track=track, device=device, name=name, value=value, display=display))
 
 
 def live_simpler_load(
@@ -220,14 +229,41 @@ def live_return_device_insert(client: BridgeClient, return_: int, name: str, ind
 
 
 def live_return_device_set_param(
-    client: BridgeClient, return_: int, device: Any, name: str, value: float
+    client: BridgeClient, return_: int, device: Any, name: str,
+    value: Optional[float] = None, display: Optional[float] = None,
 ) -> Dict[str, Any]:
-    return client.send_request("return.device_set_param", {
-        "return": return_, "device": device, "name": name, "value": value})
+    return client.send_request("return.device_set_param", _compact(
+        **{"return": return_}, device=device, name=name, value=value, display=display))
 
 
 def live_return_create(client: BridgeClient, name: Optional[str] = None) -> Dict[str, Any]:
     return client.send_request("return.create", _compact(name=name))
+
+
+# --- Master y sidechain (T-010) ---
+
+
+def live_master_device_insert(client: BridgeClient, name: str, index: int = -1) -> Dict[str, Any]:
+    return client.send_request("master.device_insert", {"name": name, "index": index})
+
+
+def live_master_device_set_param(
+    client: BridgeClient, device: Any, name: str,
+    value: Optional[float] = None, display: Optional[float] = None,
+) -> Dict[str, Any]:
+    return client.send_request("master.device_set_param", _compact(
+        device=device, name=name, value=value, display=display))
+
+
+def live_master_set_mixer(client: BridgeClient, volume_db: Any) -> Dict[str, Any]:
+    return client.send_request("master.set_mixer", {"volume_db": volume_db})
+
+
+def live_compressor_set_sidechain(
+    client: BridgeClient, track: int, device: Any, source_track_name: str
+) -> Dict[str, Any]:
+    return client.send_request("compressor.set_sidechain", {
+        "track": track, "device": device, "source_track_name": source_track_name})
 
 
 def live_locator_set(client: BridgeClient, time: float, name: str) -> Dict[str, Any]:

@@ -82,3 +82,28 @@ def test_send_and_return_tools() -> None:
         "return.device_set_param", {"return": 1, "device": "Delay", "name": "Feedback", "value": 0.4})
     assert sent(s.live_return_create, "C-Chorus") == ("return.create", {"name": "C-Chorus"})
     assert sent(s.live_return_create) == ("return.create", {})
+
+
+def test_envelope_params_are_forwarded() -> None:
+    env = [{"target": "volume", "points": [[0, 0.2], [8, 0.8]]}]
+    assert sent(s.live_clip_place_audio, 0, "C:/a.wav", 0.0, 8.0, envelopes=env, points_span="range") == (
+        "clip.place_audio", {"track": 0, "path": "C:/a.wav", "start_beat": 0.0, "length_beats": 8.0,
+                             "envelopes": env, "points_span": "range"})
+    assert sent(s.live_clip_create_midi, 1, 0.0, 4.0, [], envelopes=env) == (
+        "clip.create_midi", {"track": 1, "start_beat": 0.0, "length_beats": 4.0, "notes": [], "envelopes": env})
+
+
+def test_device_set_param_by_display_omits_value() -> None:
+    assert sent(s.live_device_set_param, 0, "Auto Filter", "Frequency", display=440) == (
+        "device.set_param", {"track": 0, "device": "Auto Filter", "name": "Frequency", "display": 440})
+    assert sent(s.live_return_device_set_param, 1, "Delay", "Feedback", display=30) == (
+        "return.device_set_param", {"return": 1, "device": "Delay", "name": "Feedback", "display": 30})
+
+
+def test_master_and_sidechain_tools() -> None:
+    assert sent(s.live_master_device_insert, "Limiter") == ("master.device_insert", {"name": "Limiter", "index": -1})
+    assert sent(s.live_master_device_set_param, "Limiter", "Gain", display=3) == (
+        "master.device_set_param", {"device": "Limiter", "name": "Gain", "display": 3})
+    assert sent(s.live_master_set_mixer, volume_db=-1) == ("master.set_mixer", {"volume_db": -1})
+    assert sent(s.live_compressor_set_sidechain, 2, "Compressor", "Kick") == (
+        "compressor.set_sidechain", {"track": 2, "device": "Compressor", "source_track_name": "Kick"})

@@ -14,6 +14,11 @@ def _db(raw: float) -> str:
     return "-inf dB" if raw <= 0 else f"{20 * math.log10(raw / 0.85):.1f} dB"
 
 
+def _hz(raw: float) -> str:
+    f = 20.0 * 1000.0 ** raw  # 20 Hz .. 20 kHz, exponencial como Auto Filter
+    return f"{f / 1000:.2f} kHz" if f >= 1000 else f"{f:.1f} Hz"
+
+
 class Param:
     def __init__(self, name, lo=0.0, hi=1.0, value=0.5, display=None, quantized=False):
         self.name, self.min, self.max, self.value = name, lo, hi, value
@@ -35,7 +40,33 @@ class Device:
     def __init__(self, name):
         self.name, self.class_name = name, name.replace(" ", "")
         self.parameters = [Param("Device On", 0, 1, 1), Param("Drive", 0, 1, 0.5),
-                           Param("Mode", 0, 2, 0, quantized=True)]
+                           Param("Mode", 0, 2, 0, quantized=True),
+                           Param("Frequency", 0.0, 1.0, 0.5, _hz)]
+
+
+class RT:
+    def __init__(self, display_name):
+        self.display_name = display_name
+
+
+class Comp(Device):
+    """Compressor con ruteo de entrada (sidechain) como en Live 11+."""
+
+    def __init__(self, song):
+        super().__init__("Compressor")
+        self.class_name = "Compressor2"
+        names = ["Ext. In", "No Input"] + [t.name for t in song.tracks]
+        self.available_input_routing_types = [RT(n) for n in names]
+        self.input_routing_type = self.available_input_routing_types[1]
+        self.available_input_routing_channels = [RT("Post FX"), RT("Pre FX")]
+        self.input_routing_channel = self.available_input_routing_channels[0]
+        self.parameters += [Param("S/C On", 0, 1, 0, quantized=True), Param("S/C Gain", 0, 1, 0.4),
+                            Param("S/C Mix", 0, 1, 1.0)]
+
+    def __setattr__(self, k, v):
+        if k == "input_routing_type" and v not in self.__dict__.get("available_input_routing_types", [v]):
+            raise ValueError("not an available routing type")
+        object.__setattr__(self, k, v)
 
 
 class Sample:
@@ -53,13 +84,54 @@ class Simpler(Device):
         self.sample = Sample(path)
 
 
-class AClip:
+class Env:
+    """Envelope de clip estricto: Live rechaza pasos fuera del clip o del rango del parametro."""
+
+    def __init__(self, clip, param):
+        self._clip, self._param, self.steps = clip, param, []
+
+    def insert_step(self, time, duration, value):
+        if time < 0 or duration <= 0 or time + duration > self._clip.length + 1e-6:
+            raise ValueError(f"step {time}+{duration} outside clip of {self._clip.length}")
+        if not self._param.min - 1e-9 <= value <= self._param.max + 1e-9:
+            raise ValueError(f"value {value} outside [{self._param.min}, {self._param.max}]")
+        self.steps.append((time, duration, value))
+
+
+class EnvMixin:
+    """Envelopes de clip: se crean SOLO en clips de Session; en Arrangement no se pueden leer."""
+
+    def _init_env(self):
+        self._envs, self.in_arrangement, self._fail_env = {}, False, False
+
+    def create_automation_envelope(self, param):
+        if self.in_arrangement:
+            raise RuntimeError("clip envelopes can only be created on Session clips")
+        if self._fail_env:
+            raise RuntimeError("param is not automatable")
+        if id(param) in self._envs:
+            raise RuntimeError("envelope already exists")
+        env = self._envs[id(param)] = Env(self, param)
+        return env
+
+    def automation_envelope(self, param):
+        if self.in_arrangement:
+            return None
+        return self._envs.get(id(param))
+
+    def env_steps(self, param):
+        env = self._envs.get(id(param))
+        return env.steps if env else None
+
+
+class AClip(EnvMixin):
     """
     Clip de audio como en Live 12.4: el span en Arrangement (end_time) NO sigue a los
     markers; solo lo fija el loop del clip de Session al duplicarlo. Sin crop().
     """
 
     def __init__(self, path, start, natural, honor_trim=True, gain_display=True):
+        self._init_env()
         self.file_path, self.start_time = path, start
         self.end_time = start + natural
         self.start_marker, self.end_marker = 0.0, natural
@@ -95,6 +167,11 @@ class Slot:
         s = self._track._song
         # No devuelve el clip a proposito: el codigo debe leer slot.clip
         self.clip = AClip(path, 0.0, s.natural, s.honor_trim, s.gain_display)
+        self.clip._fail_env = s.fail_envelopes
+
+    def create_clip(self, length):
+        self.clip = MClip(0.0, length)
+        self.clip._fail_env = self._track._song.fail_envelopes
 
     def delete_clip(self):
         self.clip = None
@@ -104,8 +181,9 @@ class Scene:
     pass
 
 
-class MClip:
+class MClip(EnvMixin):
     def __init__(self, start, length):
+        self._init_env()
         self.start_time, self.length = start, length
         self.end_time, self.name = start + length, ""
         self.notes = []
@@ -127,15 +205,21 @@ class Track:
 
     def create_audio_clip(self, path, pos):
         clip = AClip(path, pos, self._song.natural, self._song.honor_trim, self._song.gain_display)
+        clip.in_arrangement = True
         self.arrangement_clips.append(clip)
         return clip
 
     def duplicate_clip_to_arrangement(self, clip, time):
         # Como el spike real: el span = largo de loop del clip de Session
-        new = AClip(clip.file_path, time, clip.loop_end - clip.loop_start)
-        for k in ("start_marker", "end_marker", "loop_start", "loop_end", "looping",
-                  "warping", "warp_mode", "pitch_coarse", "gain"):
-            object.__setattr__(new, k, getattr(clip, k))
+        if isinstance(clip, MClip):
+            new = MClip(time, clip.length)
+            new.notes = list(clip.notes)
+        else:
+            new = AClip(clip.file_path, time, clip.loop_end - clip.loop_start)
+            for k in ("start_marker", "end_marker", "loop_start", "loop_end", "looping",
+                      "warping", "warp_mode", "pitch_coarse", "gain"):
+                object.__setattr__(new, k, getattr(clip, k))
+        new._envs, new.in_arrangement = dict(clip._envs), True  # los envelopes sobreviven
         self.arrangement_clips.append(new)
         return None  # la referencia no es confiable: se re-busca por start_time
 
@@ -144,13 +228,14 @@ class Track:
 
     def create_midi_clip(self, start, length):
         clip = MClip(start, length)
+        clip.in_arrangement = True
         self.arrangement_clips.append(clip)
         return clip
 
     def insert_device(self, name, index):
         if name == "Nope":
             raise RuntimeError("device not found")
-        dev = Simpler() if name == "Simpler" else Device(name)
+        dev = Simpler() if name == "Simpler" else Comp(self._song) if name == "Compressor" else Device(name)
         self.devices.insert(index, dev)
         return dev
 
@@ -170,6 +255,8 @@ class Song:
         self._time, self._pending, self.cue_points = 0.0, None, []
         self.freeze_playhead = False
         self.natural, self.honor_trim, self.gain_display = 8.0, True, True
+        self.fail_envelopes = False
+        self.master_track = Track(self, False, "Master")
 
     def create_scene(self, i):
         self.scenes.append(Scene())
@@ -801,3 +888,324 @@ def test_delete_range_validation(song) -> None:
                    {"track": 0, "start_beat": -1, "end_beat": 8}) == errors.INVALID_PARAMS
     assert code_of(production.clip_delete_range, song,
                    {"track": 9, "start_beat": 0, "end_beat": 8}) == errors.TRACK_NOT_FOUND
+
+
+# --- T-010: unidades por display, envelopes, master, sidechain -----------------
+
+
+def test_parse_display_units() -> None:
+    assert production.parse_display("1.20 kHz") == 1200.0
+    assert production.parse_display("200 ms") == 200.0
+    assert production.parse_display("1.5 s") == 1500.0
+    assert production.parse_display("-6.0 dB") == -6.0
+    assert production.parse_display("50 %") == 50.0
+    assert production.parse_display("abc") is None
+
+
+def test_raw_for_display_hits_hz_target_across_khz_boundary() -> None:
+    freq = Device("X").parameters[3]
+    for target in (200.0, 1000.0, 8000.0):
+        raw, within = production._raw_for_display(freq, target)
+        assert within is True
+        assert abs(production.parse_display(freq.str_for_value(raw)) - target) <= target * 0.02
+
+
+def test_raw_for_display_handles_decreasing_display() -> None:
+    p = Param("Rev", 0.0, 1.0, 0.5, lambda v: f"{100 - 50 * v:.1f} %")
+    raw, within = production._raw_for_display(p, 75.0)
+    assert within and abs(raw - 0.5) < 0.01
+
+
+def test_raw_for_display_unreachable_is_flagged() -> None:
+    freq = Device("X").parameters[3]
+    raw, within = production._raw_for_display(freq, 90000.0)
+    assert within is False and raw == 1.0
+
+
+def test_raw_for_display_unparseable_raises_invalid() -> None:
+    p = Param("Div", 0, 1, 0, lambda v: "1/4 note")
+    assert code_of(production._raw_for_display, p, 3.0) == errors.INVALID_PARAMS
+
+
+def env_of(song, track_idx, clip_idx, param):
+    return song.tracks[track_idx].arrangement_clips[clip_idx].env_steps(param)
+
+
+VOL_RAMP = [{"target": "volume", "points": [[0, 0.2], [8, 0.8]]}]
+
+
+def test_place_audio_envelope_forces_session_duplicate_and_writes_ramp(song, wav) -> None:
+    out = place(song, wav, envelopes=VOL_RAMP)
+    assert out["ok"] is True and methods(out) == ["session_duplicate"]
+    steps = env_of(song, 0, 0, song.tracks[0].mixer_device.volume)
+    assert len(steps) == 32
+    assert steps[0] == (0.0, 0.25, pytest.approx(0.2))
+    assert steps[16][2] == pytest.approx(0.5)  # beat 4 de 8: mitad de la rampa
+    assert all(d == 0.25 for _, d, _ in steps)
+    assert out["clips"][0]["envelopes"] == [
+        {"target": "volume", "param": "Volume", "ok": True, "steps": 32}]
+    assert not any(s.has_clip for s in song.tracks[0].clip_slots) and len(song.scenes) == 1
+
+
+def test_place_audio_envelope_tiles_restart_when_span_is_tile(song, wav) -> None:
+    out = place(song, wav, length_beats=20.0, envelopes=[
+        {"target": "volume", "points": [[0, 0.1], [8, 0.9]]}])
+    assert methods(out) == ["session_duplicate"] * 3 and out["ok"] is True
+    vol = song.tracks[0].mixer_device.volume
+    firsts = [env_of(song, 0, i, vol)[0][2] for i in range(3)]
+    assert firsts == [pytest.approx(0.1)] * 3
+    assert [len(env_of(song, 0, i, vol)) for i in range(3)] == [32, 32, 16]  # ultimo tile parcial
+
+
+def test_place_audio_envelope_range_span_slices_one_sweep_across_tiles(song, wav) -> None:
+    out = place(song, wav, start_beat=16.0, length_beats=20.0, points_span="range", envelopes=[
+        {"target": "volume", "points": [[0, 0.0], [20, 1.0]]}])
+    assert out["ok"] is True
+    vol = song.tracks[0].mixer_device.volume
+    by_start = {c.start_time: c.env_steps(vol) for c in song.tracks[0].arrangement_clips}
+    assert by_start[16.0][0][2] == pytest.approx(0.0)
+    assert by_start[24.0][0][2] == pytest.approx(0.4)
+    assert by_start[32.0][0][2] == pytest.approx(0.8)
+    assert by_start[32.0][-1][0] == 3.75 and by_start[32.0][-1][1] == 0.25  # tile corto, tiempos relativos
+
+
+def test_place_audio_envelope_holds_first_and_last_value_outside_points(song, wav) -> None:
+    place(song, wav, envelopes=[{"target": "volume", "points": [[2, 0.3], [4, 0.6]]}])
+    steps = env_of(song, 0, 0, song.tracks[0].mixer_device.volume)
+    assert steps[0][2] == pytest.approx(0.3) and steps[-1][2] == pytest.approx(0.6)
+
+
+def test_place_audio_envelope_display_points_resolved_by_unit(song, wav) -> None:
+    song.tracks[0].devices.append(Device("Auto Filter"))
+    freq = song.tracks[0].devices[0].parameters[3]
+    out = place(song, wav, envelopes=[{
+        "target": {"device": "Auto Filter", "param": "Frequency"},
+        "points": [[0, {"display": 200}], [8, {"display": 4000}]]}])
+    assert out["ok"] is True
+    steps = env_of(song, 0, 0, freq)
+    first = production.parse_display(freq.str_for_value(steps[0][2]))
+    assert abs(first - 200) <= 200 * 0.02
+    info = out["clips"][0]["envelopes"][0]
+    assert info["target"] == {"device": "Auto Filter", "param": "Frequency"} and info["param"] == "Frequency"
+
+
+def test_place_audio_envelope_pan_and_send_targets(song, wav) -> None:
+    out = place(song, wav, envelopes=[
+        {"target": "pan", "points": [[0, -1.0], [8, 1.0]]},
+        {"target": {"send": 1}, "points": [[0, 0.0], [8, 0.5]]}])
+    assert out["ok"] is True
+    m = song.tracks[0].mixer_device
+    assert env_of(song, 0, 0, m.panning)[0][2] == pytest.approx(-1.0)
+    assert env_of(song, 0, 0, m.sends[1])[-1][2] > 0.45
+    assert env_of(song, 0, 0, m.sends[0]) is None
+    assert [e["ok"] for e in out["clips"][0]["envelopes"]] == [True, True]
+
+
+def test_place_audio_envelope_section_loop_uses_hook_too(song, wav) -> None:
+    out = place(song, wav, length_beats=4.0, loop_start=0.0, loop_end=4.0, envelopes=VOL_RAMP)
+    assert out["ok"] is True
+    assert len(env_of(song, 0, 0, song.tracks[0].mixer_device.volume)) == 16
+
+
+def test_place_audio_envelope_failure_is_reported_per_tile_not_fatal(song, wav) -> None:
+    song.fail_envelopes = True
+    out = place(song, wav, envelopes=VOL_RAMP)
+    e = out["clips"][0]["envelopes"][0]
+    assert e["ok"] is False and "not automatable" in e["error"]
+    assert out["ok"] is False and any("envelope" in w for w in out["warnings"])
+    assert len(song.tracks[0].arrangement_clips) == 1  # el clip igual quedo colocado
+
+
+@pytest.mark.parametrize("bad", [
+    "volume",                                                       # no es lista
+    [{"points": [[0, 0.1]]}],                                       # falta target
+    [{"target": "tone", "points": [[0, 0.1]]}],
+    [{"target": {"send": 9}, "points": [[0, 0.1]]}],
+    [{"target": {"send": True}, "points": [[0, 0.1]]}],
+    [{"target": {"device": "Nope", "param": "Drive"}, "points": [[0, 0.1]]}],
+    [{"target": {"device": 0, "param": "Nope"}, "points": [[0, 0.1]]}],
+    [{"target": "volume", "points": []}],
+    [{"target": "volume", "points": [[0]]}],
+    [{"target": "volume", "points": [[-1, 0.1]]}],
+    [{"target": "volume", "points": [[0, "x"]]}],
+    [{"target": "volume", "points": [[0, {"display": "x"}]]}],
+    [{"target": "volume", "points": [[0, 7.0]]}],                   # raw fuera de rango
+    [{"target": "volume", "points": [[0, 0.1], [0, 0.2]]}],         # tiempos no crecientes
+    [{"target": "volume", "points": [[0, 0.1]]}] * 17,
+])
+def test_place_audio_envelope_validation(song, wav, bad) -> None:
+    song.tracks[0].devices.append(Device("Auto Filter"))
+    params = {"track": 0, "path": wav, "start_beat": 0, "length_beats": 8, "envelopes": bad}
+    assert code_of(production.clip_place_audio, song, params) == errors.INVALID_PARAMS
+    assert song.tracks[0].arrangement_clips == []  # valida todo antes de tocar el set
+
+
+def test_place_audio_envelope_other_param_validation(song, wav) -> None:
+    kw = {"track": 0, "path": wav, "start_beat": 0, "length_beats": 8}
+    assert code_of(production.clip_place_audio, song, dict(kw, envelopes=VOL_RAMP, points_span="x")) == errors.INVALID_PARAMS
+    assert code_of(production.clip_place_audio, song, dict(kw, envelopes=VOL_RAMP, one_shot=True)) == errors.INVALID_PARAMS
+
+
+def test_place_audio_no_envelopes_keeps_old_path_and_has_no_envelope_key(song, wav) -> None:
+    out = place(song, wav)
+    assert methods(out) == ["create_audio_clip"] and "envelopes" not in out["clips"][0]
+
+
+def test_create_midi_envelope_goes_through_session_slot(song) -> None:
+    out = production.clip_create_midi(song, LIVE, {
+        "track": 1, "start_beat": 32.0, "length_beats": 4.0, "notes": NOTES, "envelopes": VOL_RAMP})
+    assert (out["start_time"], out["end_time"], out["note_count"]) == (32.0, 36.0, 2)
+    assert out["method"] == "session_duplicate" and out["ok"] is True
+    clip = song.tracks[1].arrangement_clips[0]
+    assert len(clip.env_steps(song.tracks[1].mixer_device.volume)) == 16
+    assert out["envelopes"] == [{"target": "volume", "param": "Volume", "ok": True, "steps": 16}]
+    assert not any(s.has_clip for s in song.tracks[1].clip_slots) and len(song.scenes) == 1
+    assert len(song.tracks[1].arrangement_clips) == 1
+
+
+def test_create_midi_envelope_validates_before_touching_the_set(song) -> None:
+    bad = {"track": 1, "start_beat": 0, "length_beats": 4, "notes": [],
+           "envelopes": [{"target": "tone", "points": [[0, 0]]}]}
+    assert code_of(production.clip_create_midi, song, LIVE, bad) == errors.INVALID_PARAMS
+    assert song.tracks[1].arrangement_clips == []
+
+
+def test_create_midi_envelope_failure_reported(song) -> None:
+    song.fail_envelopes = True
+    out = production.clip_create_midi(song, LIVE, {
+        "track": 1, "start_beat": 0.0, "length_beats": 4.0, "notes": NOTES, "envelopes": VOL_RAMP})
+    assert out["ok"] is False and out["envelopes"][0]["ok"] is False
+    assert out["note_count"] == 2
+
+
+# --- master ----------------------------------------------------------------
+
+
+def test_master_device_insert_and_set_param(song) -> None:
+    ins = production.master_device_insert(song, {"name": "Limiter"})
+    assert ins["index"] == 0 and song.master_track.devices[0].name == "Limiter"
+    out = production.master_device_set_param(song, {"device": "Limiter", "name": "Drive", "value": 0.7})
+    assert out["value"] == 0.7
+    byd = production.master_device_set_param(song, {"device": 0, "name": "Frequency", "display": 1000})
+    assert byd["within_tolerance"] is True and "kHz" in byd["display"]
+
+
+def test_master_set_mixer_volume_db(song) -> None:
+    out = production.master_set_mixer(song, {"volume_db": -3})
+    assert abs(float(out["volume"]["display"].split()[0]) + 3) <= 0.1 + 1e-9
+    assert out["volume"]["within_tolerance"] is True
+    assert code_of(production.master_set_mixer, song, {}) == errors.INVALID_PARAMS
+    assert code_of(production.master_set_mixer, song, {"volume_db": "loud"}) == errors.INVALID_PARAMS
+
+
+def test_master_device_errors(song) -> None:
+    assert code_of(production.master_device_set_param, song,
+                   {"device": 3, "name": "x", "value": 1}) == errors.INVALID_PARAMS
+
+
+# --- device.set_param por unidad -------------------------------------------
+
+
+def test_device_set_param_display(song) -> None:
+    production.device_insert(song, {"track": 0, "name": "Auto Filter"})
+    out = production.device_set_param(song, {"track": 0, "device": 0, "name": "Frequency", "display": 440})
+    assert out["within_tolerance"] is True and out["display"].endswith("Hz")
+    assert abs(production.parse_display(out["display"]) - 440) <= 440 * 0.02
+    assert song.tracks[0].devices[0].parameters[3].value == out["value"]
+
+
+def test_device_set_param_value_xor_display(song) -> None:
+    production.device_insert(song, {"track": 0, "name": "Auto Filter"})
+    base = {"track": 0, "device": 0, "name": "Frequency"}
+    assert code_of(production.device_set_param, song, dict(base)) == errors.INVALID_PARAMS
+    assert code_of(production.device_set_param, song, dict(base, value=0.5, display=440)) == errors.INVALID_PARAMS
+    assert code_of(production.device_set_param, song, dict(base, display="x")) == errors.INVALID_PARAMS
+
+
+def test_return_device_set_param_display(rsong) -> None:
+    rsong.return_tracks[0].devices.append(Device("Auto Filter"))
+    out = production.return_device_set_param(rsong, {"return": 0, "device": "Auto Filter",
+                                                     "name": "Frequency", "display": 2000})
+    assert out["within_tolerance"] is True
+
+
+def test_device_set_param_plain_value_has_no_within_tolerance(song) -> None:
+    production.device_insert(song, {"track": 0, "name": "Saturator"})
+    out = production.device_set_param(song, {"track": 0, "device": 0, "name": "Drive", "value": 0.3})
+    assert "within_tolerance" not in out
+
+
+# --- sidechain -------------------------------------------------------------
+
+
+@pytest.fixture
+def csong(song):
+    song.tracks[0].name, song.tracks[1].name = "Kick", "Bass"
+    production.device_insert(song, {"track": 1, "name": "Compressor"})
+    return song
+
+
+def test_sidechain_routes_by_track_name_and_enables_sc(csong) -> None:
+    out = production.compressor_set_sidechain(
+        csong, {"track": 1, "device": "Compressor", "source_track_name": "Kick"})
+    comp = csong.tracks[1].devices[0]
+    assert comp.input_routing_type.display_name == "Kick"
+    assert next(p for p in comp.parameters if p.name == "S/C On").value == 1.0
+    assert out["ok"] is True and out["input_routing_type"] == "Kick"
+    assert out["available_input_routing_types"] == ["Ext. In", "No Input", "Kick", "Bass"]
+    assert out["available_input_routing_channels"] == ["Post FX", "Pre FX"]
+    assert out["input_routing_channel"] == "Post FX" and out["sidechain_on"] is True
+    assert [p["name"] for p in out["sc_params"]] == ["S/C On", "S/C Gain", "S/C Mix"]
+    assert out["sc_params"][0]["value"] == 1.0
+
+
+def test_sidechain_unknown_source_lists_options(csong) -> None:
+    with pytest.raises(errors.CommandError) as e:
+        production.compressor_set_sidechain(csong, {"track": 1, "device": 0, "source_track_name": "Nope"})
+    assert e.value.code == errors.INVALID_PARAMS and "Kick" in e.value.message
+    assert csong.tracks[1].devices[0].input_routing_type.display_name == "No Input"
+
+
+def test_sidechain_device_without_routing_api_is_clear_error(csong) -> None:
+    production.device_insert(csong, {"track": 1, "name": "Saturator"})
+    with pytest.raises(errors.CommandError) as e:
+        production.compressor_set_sidechain(
+            csong, {"track": 1, "device": "Saturator", "source_track_name": "Kick"})
+    assert e.value.code == errors.INVALID_PARAMS and "input_routing" in e.value.message
+
+
+def test_sidechain_without_sc_on_param_reports_and_not_ok(csong) -> None:
+    comp = csong.tracks[1].devices[0]
+    comp.parameters = [p for p in comp.parameters if p.name != "S/C On"]
+    out = production.compressor_set_sidechain(csong, {"track": 1, "device": 0, "source_track_name": "Kick"})
+    assert out["ok"] is False and out["sidechain_on"] is None
+    assert comp.input_routing_type.display_name == "Kick"
+    assert any("S/C On" in w for w in out["warnings"])
+
+
+def test_sidechain_routing_failure_is_a_step_error(csong) -> None:
+    comp = csong.tracks[1].devices[0]
+
+    class Frozen(type(comp)):
+        def __setattr__(self, k, v):
+            if k == "input_routing_type":
+                raise RuntimeError("routing locked")
+            object.__setattr__(self, k, v)
+
+    comp.__class__ = Frozen
+    out = production.compressor_set_sidechain(csong, {"track": 1, "device": 0, "source_track_name": "Kick"})
+    assert out["ok"] is False and out["steps"]["set_input_routing_type"]["ok"] is False
+
+
+def test_sidechain_validation(csong) -> None:
+    base = {"track": 1, "device": 0, "source_track_name": "Kick"}
+    assert code_of(production.compressor_set_sidechain, csong, dict(base, track=9)) == errors.TRACK_NOT_FOUND
+    assert code_of(production.compressor_set_sidechain, csong, dict(base, source_track_name="")) == errors.INVALID_PARAMS
+    assert code_of(production.compressor_set_sidechain, csong, dict(base, device=5)) == errors.INVALID_PARAMS
+
+
+def test_sidechain_matches_routing_name_with_track_number_prefix(csong) -> None:
+    comp = csong.tracks[1].devices[0]
+    comp.available_input_routing_types = [RT("Ext. In"), RT("No Input"), RT("1-Kick"), RT("2-Bass")]
+    out = production.compressor_set_sidechain(csong, {"track": 1, "device": 0, "source_track_name": "kick"})
+    assert out["input_routing_type"] == "1-Kick" and out["ok"] is True
