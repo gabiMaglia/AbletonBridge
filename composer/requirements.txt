@@ -1,0 +1,2 @@
+# Dependencias del paquete composer (reglas de arreglo como codigo, T-015).
+pyyaml>=6.0

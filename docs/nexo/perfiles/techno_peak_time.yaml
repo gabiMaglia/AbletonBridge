@@ -1,0 +1,481 @@
+# Perfil de género: techno peak time (T-015, semilla de F6).
+#
+# Esquema: F4 §8 (docs/nexo/hallazgos/F4_techno_peak_time.md), extendido con lo que
+# se aprendió construyendo T01/T02 (docs/nexo/temas/). Lo carga composer/profile.py.
+#
+# Convenciones:
+#   - Cada bloque de primer nivel dentro de global/elementos/reglas/transiciones/mezcla
+#     lleva `fuente` y `confianza` (alta = medido o hecho por Gabriel, media = varios
+#     tutoriales o probado en T01/T02, baja = un solo origen o propuesta).
+#   - `criterio_gabriel: true` marca lo que sale de sus correcciones a oído (P-02);
+#     esos valores pisan los de base y siempre llevan confianza alta (D-13).
+#   - `propuesta: true` marca elecciones de diseño que NO vienen de la web ni de
+#     Gabriel: las decide su oído (D-01).
+#   - Compases 1-based. Tiempos dentro del compás 1-based (1..4). dB siempre relativos
+#     al fader; el nivel automatizado va SIEMPRE en un Utility "Output" (D-15).
+
+perfil:
+  id: techno-peak-time
+  version: 0.2.0
+  fecha: 2026-11-22
+  beatport: "Techno (Peak Time / Driving)"
+  sellos_referencia: [Drumcode, KNTXT, Filth on Acid]
+  artistas_referencia: [Adam Beyer, Enrico Sangiuliano, Amelie Lens, Bart Skils,
+                        Layton Giordani, Eli Brown, Charlotte de Witte]
+
+global:
+  tempo:
+    min: 126
+    tipico: 130
+    max: 135
+    fuente: [S11, S1, S5]
+    confianza: alta
+  compas:
+    valor: "4/4"
+    fuente: [S14]
+    confianza: alta
+  grilla_frases:
+    valor: [8, 16, 32]
+    fuente: [S10, S14]
+    confianza: alta
+  nota_bajo:
+    min: E0
+    max: E1
+    fuente: [S10]
+    confianza: media
+  swing:
+    min: 0
+    tipico: 10
+    max: 20
+    fuente: [S4, S10]
+    confianza: baja
+
+# Un rol es un elemento del tema. `tipo`: loop (audio en tiles), oneshot (audio de una
+# sola copia, se mide y se ancla), midi (Simpler + notas). `pista` agrupa roles en una
+# misma pista (como el FX de T02). warp: beats | complex | complex_pro | tones.
+elementos:
+  kick:
+    tipo: midi
+    pista: KICK
+    nota_midi: 58          # Simpler raiz 60, -2 st: G -> F (T01)
+    velocity: 110
+    nivel_db: -6
+    fuente: [T01, S3]
+    confianza: media
+  rumble:
+    tipo: loop
+    pista: RUMBLE
+    warp: complex          # criterio de Gabriel: Complex para rumble
+    nivel_db: -10
+    sidechain_a: kick
+    criterio_gabriel: true
+    fuente: [T01, F4 criterios de Gabriel]
+    confianza: alta
+  bass:
+    tipo: loop
+    pista: BASS
+    warp: beats
+    nivel_db: -12
+    sidechain_a: kick
+    fuente: [T01, S7, S2]
+    confianza: media
+  drums:
+    tipo: loop
+    pista: DRUMS NO KICK
+    warp: beats
+    nivel_db: -12
+    fuente: [T01]
+    confianza: media
+  top:
+    tipo: loop
+    pista: TOP
+    warp: beats
+    nivel_db: -14
+    fuente: [T01]
+    confianza: media
+  clap:
+    tipo: loop
+    pista: CLAP
+    warp: beats
+    nivel_db: -12
+    fuente: [T01, S1]
+    confianza: media
+  stab:
+    tipo: loop
+    pista: STAB
+    warp: beats
+    nivel_db: -16
+    fuente: [T01]
+    confianza: media
+  atmo:
+    tipo: loop
+    pista: ATMO
+    warp: complex
+    nivel_db: -20
+    envios: {hall: -14}
+    fuente: [T01, T02]
+    confianza: media
+  atmo_trippy:
+    tipo: loop
+    pista: ATMO TRIPPY
+    warp: complex
+    nivel_db: -20
+    envios: {hall: -10}
+    fuente: [T02]
+    confianza: media
+  lead:
+    tipo: loop
+    pista: LEAD
+    warp: beats
+    nivel_db: -16
+    envios: {reverb: -20}
+    fuente: [T02]
+    confianza: media
+  vox_acid:
+    tipo: loop
+    pista: VOX ACID
+    warp: complex_pro
+    nivel_db: -12
+    envios: {reverb: -18}
+    fuente: [T02]
+    confianza: media
+  vox_angel:
+    tipo: loop
+    pista: VOX ANGEL
+    warp: complex_pro
+    nivel_db: -14
+    envios: {delay: -8, hall: -12}
+    fuente: [T02]
+    confianza: media
+  choir:
+    tipo: loop
+    pista: CHOIR
+    warp: complex_pro
+    nivel_db: -22
+    envios: {reverb: -6, hall: -8}
+    fuente: [T02]
+    confianza: media
+  pad:
+    tipo: loop
+    pista: PAD
+    warp: complex
+    nivel_db: -22
+    envios: {hall: -6}
+    fuente: [T02]
+    confianza: media
+  snare_fill:
+    tipo: midi
+    pista: SNARE FILL
+    nota_midi: 60
+    nivel_db: -17          # a -14 estaba muy fuerte (Gabriel)
+    envios: {reverb: -14}
+    criterio_gabriel: true
+    fuente: [T02 bitacora]
+    confianza: alta
+  roll:
+    tipo: loop
+    pista: ROLLS
+    warp: beats
+    nivel_db: -12
+    envios: {reverb: -16}
+    fuente: [T02]
+    confianza: media
+  roll_32:
+    tipo: loop
+    pista: ROLLS
+    warp: beats
+    nivel_db: -12
+    fuente: [T02]
+    confianza: media
+  crash:
+    tipo: oneshot
+    pista: CRASH
+    warp: complex
+    nivel_db: -16
+    envios: {reverb: -12}
+    fuente: [T02, S10]
+    confianza: media
+  impacto:
+    tipo: oneshot
+    pista: FX IMPACT
+    warp: complex
+    nivel_db: -14
+    fuente: [T02, S1]
+    confianza: media
+  reverse:
+    tipo: oneshot
+    pista: FX REVERSE
+    warp: complex
+    nivel_db: -14
+    fuente: [T02, T6, T4]
+    confianza: media
+  sweep_up:
+    tipo: oneshot
+    pista: FX
+    warp: complex
+    nivel_db: -14
+    fuente: [T02]
+    confianza: media
+  sweep_down:
+    tipo: oneshot
+    pista: FX
+    warp: complex
+    nivel_db: -14
+    fuente: [T02, T1]
+    confianza: media
+  riser_largo:
+    tipo: oneshot
+    pista: FX
+    warp: complex
+    nivel_db: -14
+    fuente: [T02]
+    confianza: media
+  riser_corto:
+    tipo: oneshot
+    pista: FX
+    warp: complex
+    nivel_db: -14
+    fuente: [T02]
+    confianza: media
+
+retornos:
+  - {id: reverb, nombre: "Reverb"}
+  - {id: delay, nombre: "Delay"}
+  - {id: hall, nombre: "C-HALL"}   # Hybrid Reverb Dark Hall, decay 8 s, 100 % wet (T02)
+
+# Plantillas de estructura. Cada seccion: id, tipo, compases, y como cambian las capas
+# respecto de la seccion anterior:
+#   suma:  [rol | {rol, desde}]   entra al inicio, o en el compas relativo `desde`
+#   quita: [rol | {rol, desde}]   sale al inicio, o en el compas relativo `desde`
+#   solo:  [roles]                reemplaza el set completo (corta todo lo demas)
+#   ocasionales: [{rol, fraseo}]  fraseo ultimos_8_de_16: la 2.a mitad de cada frase de 16
+#   transicion: overrides de transiciones.al_entrar para esa seccion
+plantillas:
+  fuente: [F4 §2, T02]
+  confianza: media
+  peak_time_estandar:
+    descripcion: "F4 §2: intro 32, build 16, drop 32, breakdown 32, drop2 32, outro 32"
+    secciones:
+      - {id: intro, tipo: intro, compases: 32, suma: [kick, top, rumble]}
+      - {id: build, tipo: groove, compases: 16, suma: [clap, bass, drums]}
+      - {id: drop1, tipo: drop, compases: 32, suma: [stab, atmo]}
+      - {id: breakdown, tipo: breakdown, compases: 32}
+      - {id: drop2, tipo: drop, compases: 32,
+         solo: [kick, rumble, bass, drums, top, clap, stab, lead]}
+      - {id: outro, tipo: outro, compases: 32, quita: [stab, lead, bass, drums]}
+  t02_like:
+    descripcion: "Mismo arreglo que T02 (192 compases): silencio de 1 compas antes de drop 2"
+    secciones:
+      - {id: intro_a, tipo: intro, compases: 16, suma: [kick, top]}
+      - {id: intro_b, tipo: intro, compases: 16,
+         suma: [clap, rumble, {rol: drums, desde: 9}]}
+      - {id: groove_1, tipo: groove, compases: 16, suma: [bass],
+         ocasionales: [{rol: vox_acid, fraseo: ultimos_8_de_16}]}
+      - {id: groove_2, tipo: groove, compases: 16, suma: [stab, atmo],
+         ocasionales: [{rol: vox_acid, fraseo: ultimos_8_de_16}],
+         transicion: {impacto: true, reverse: false}}
+      - {id: main, tipo: drop, compases: 32, quita: [atmo],
+         ocasionales: [{rol: vox_acid, fraseo: ultimos_8_de_16}]}
+      - {id: puente, tipo: breakdown, compases: 31,
+         quita: [kick, rumble, bass, drums, top, clap, stab]}
+      - {id: silencio, tipo: silence, compases: 1, solo: []}
+      - {id: drop_2, tipo: drop, compases: 32,
+         suma: [kick, rumble, bass, drums, top, clap, stab, lead, {rol: choir, desde: 17}],
+         ocasionales: [{rol: vox_acid, fraseo: ultimos_8_de_16}]}
+      - {id: outro_a, tipo: outro, compases: 16,
+         quita: [stab, lead, choir, {rol: bass, desde: 9}]}
+      - {id: outro_b, tipo: outro, compases: 16, quita: [rumble, drums, bass]}
+
+reglas:
+  huecos_kick:
+    descripcion: "El hueco crece con el nivel de la frase que termina (F4 §5)"
+    por_nivel:           # tiempos del ULTIMO compas de la frase en los que NO suena el kick
+      8: [4]
+      16: [3, 4]
+      32: [1, 2, 3, 4]
+    silencian_en_limite_de_seccion_nivel_32: [rumble, bass]
+    sin_huecos_en_el_ultimo_compas_del_tema: true
+    fuente: [S9, T6, T22, T02 capa 4]
+    confianza: media
+  fills:
+    descripcion: "Fills de fin de frase dentro del groove"
+    snare_fin_de_8:      # solo en fines de 8 que NO son de 16
+      rol: snare_fill
+      tiempo_inicio: 4
+      notas: 4
+      paso_beats: 0.25
+      velocity: [70, 118]
+      nota_midi: 60
+    roll_fin_de_16:      # audio Drumcoding, termina justo en el cambio de frase
+      rol: roll
+      beats: 3
+    roll_fin_de_32:
+      rol: roll_32
+      beats: 4
+    fuente: [T2, T5, T6, T02 capa 4]
+    confianza: media
+  crashes:
+    cada_compases: 16
+    desde_compas: 17
+    excluir_dentro_de: [breakdown]   # el crash cae en el inicio de la seccion, no en el medio
+    fuente: [T6, S10, T02 capa 4]
+    confianza: media
+  corte_previo_al_drop:
+    descripcion: "Anacrusa: se silencia todo salvo un elemento 2 tiempos antes del drop (si no hay silencio)"
+    beats: 2
+    conserva: [snare_fill]
+    fuente: [T1, T6]
+    confianza: media
+  llamado_respuesta:
+    descripcion: "La voz llama, el stab responde: alternan de a 2 compases dentro de la frase"
+    pares:
+      - {llama: vox_acid, responde: stab, unidad_compases: 2}
+    criterio_gabriel: true
+    fuente: [F4 criterios de Gabriel, T23, T24]
+    confianza: alta
+  escalera_filtro:
+    descripcion: "Cada frase de 8 llega mas lejos que la anterior (diente de sierra por frase)"
+    roles: [stab]
+    frase_compases: 8
+    dispositivo: "Auto Filter"
+    parametro: "Frequency"
+    # un rango por cada tramo continuo en que el rol suena: lo/hi de la primera y la ultima frase
+    tramos:
+      - {lo_hz: [250, 1500], hi_hz: [900, 12000]}
+      - {lo_hz: [600, 2500], hi_hz: [3000, 16000]}
+    receta: {resonancia_pct: 25, drive_pct: 14}
+    criterio_gabriel: true
+    fuente: [T02 bitacora, T18]
+    confianza: alta
+  apertura_lead:
+    descripcion: "El filtro del lead abre en todo el tramo: 400 Hz, 2,5 kHz a mitad, 16 kHz al final"
+    roles: [lead]
+    dispositivo: "Auto Filter"
+    parametro: "Frequency"
+    puntos_hz: [400, 2500, 16000]
+    receta: {resonancia_pct: 20, drive_pct: 14}
+    criterio_gabriel: true
+    fuente: [T02 bitacora]
+    confianza: alta
+  filtro_sigue_al_riser:
+    descripcion: >
+      LP 24 dB SVF con resonancia: corta los agudos rapido al arrancar el riser y los
+      reabre acompanando su movimiento (curva no recta, T10). Termina abierto.
+    roles: [atmo, atmo_trippy, choir, snare_fill]
+    dispositivo: "Auto Filter"
+    parametro: "Frequency"
+    receta: {tipo: "LP 24 dB SVF", resonancia_pct: 29, drive_pct: 14}
+    cerrado_hz: 700
+    curva_hz: [1200, 3000, 8000]
+    abierto_hz: 16000
+    cierre_beats: 1
+    criterio_gabriel: true
+    fuente: [F4 criterios de Gabriel, T10]
+    confianza: alta
+  entrada_filtrada:
+    descripcion: "Un elemento nuevo entra con el filtro cerrado y abre en 8 compases (F4 §4)"
+    roles: [atmo]
+    dispositivo: "Auto Filter"
+    parametro: "Frequency"
+    compases: 8
+    desde_hz: 300
+    hasta_hz: 16000
+    receta: {resonancia_pct: 20, drive_pct: 10}
+    propuesta: true
+    fuente: [T10]
+    confianza: baja
+  movimiento_pan:
+    descripcion: "Paneo que alterna cada N compases; ATMO y ATMO TRIPPY en fase opuesta (dialogo)"
+    items:
+      - {rol: top, amplitud: 0.15, cada_compases: 4, fase: 1}
+      - {rol: atmo, amplitud: 0.5, cada_compases: 8, fase: 1}
+      - {rol: atmo_trippy, amplitud: 0.5, cada_compases: 8, fase: -1}
+    fuente: [T02 capa 3, T18]
+    confianza: media
+  puente:
+    descripcion: >
+      Tension continua (Gabriel): los elementos entran de a poco, salvo el primero, que
+      puede entrar de golpe porque culmina el riser anterior. Todo termina en el silencio.
+    paso_entrada_compases: 4
+    orden_entrada: [atmo, atmo_trippy, choir, vox_angel, top]
+    entra_de_golpe_el_primero: true
+    salidas_antes_del_final: {vox_angel: 3}     # compases antes del final de la seccion
+    cama: [pad]
+    # fade-in sobre Utility Output (D-15): nivel de arranque y compases hasta 0 dB
+    fades:
+      atmo_trippy: {desde_db: -60, compases: 4}
+      choir: {desde_db: -30, compases: 8, hasta_db: -4}
+      vox_angel: {desde_db: -40, compases: 2}
+      top: {desde_db: -30, compases: 4}
+    swell_final_db: {choir: 4, pad: 6}          # crecen hasta el ultimo compas y vuelven a 0
+    cama_desde_db: {pad: -20}
+    fade_por_defecto: {desde_db: -40, compases: 4}   # propuesta, para roles sin fade propio
+    reverse_antes_de_la_entrada: [vox_angel, top]     # un reverse que termina en la entrada
+    roll_snare:
+      rol: snare_fill
+      nota_midi: 60
+      etapas:      # de atras para adelante terminan en el final del puente
+        - {compases: 4, paso_beats: 1.0, velocity: [35, 60]}
+        - {compases: 4, paso_beats: 0.5, velocity: [55, 85]}
+        - {compases: 4, paso_beats: 0.25, velocity: [80, 105]}
+        - {compases: 2, paso_beats: 0.25, velocity: [100, 115]}
+        - {compases: 1, paso_beats: 0.125, velocity: [110, 127]}
+    filtro_master:
+      dispositivo: "Auto Filter"
+      parametro: "Frequency"
+      desde_hz: 20
+      hasta_hz: 900
+      compases: 8
+    riser_compases: 8
+    criterio_gabriel: true
+    fuente: [F4 criterios de Gabriel, T02 bitacora, T1, T8]
+    confianza: alta
+
+transiciones:
+  descripcion: "Que marca cada limite de seccion (efectos de audio, no automatizacion)"
+  al_entrar:
+    intro: {reverse: true}
+    groove: {reverse: true}
+    drop: {downlifter: true}
+    breakdown: {reverse: true}
+    silence: {riser_antes: riser_largo}
+    outro: {reverse: true}
+  tras_silencio: {impacto: true, reverse: false, downlifter: true}
+  drop_sin_silencio: {riser_antes: sweep_up}
+  riser_adicional_antes_del_silencio: riser_corto
+  reverse_cada_16_en: [drop]
+  silencio_compases: 1
+  fuente: [T02, T1, T6, T8, S9]
+  confianza: media
+
+mezcla:
+  retornos_por_defecto: {reverb: -4, delay: -6, hall: -4}
+  sidechain:
+    fuente_track: kick
+    destinos: [rumble, bass]
+    dispositivo: "Compressor"
+  mono_bajo_hz: 100
+  headroom_pre_master_dbfs: -6
+  nivel_utility_fades: "Output"     # D-15: NUNCA automatizar volume; solo este parametro
+  fuente: [S3, S23, S36, T02, D-15]
+  confianza: media
+
+master:
+  club: {lufs_integrado: [-9.9, -7.6], tipico: -8.6, lufs_short_drop: -6, true_peak_dbtp: -1.0}
+  cadena: [eq, glue_2a1_30ms_1a2db, saturacion_opcional, limitador]
+  fuente: [S13, S24, S27]
+  confianza: media
+
+correcciones_oido:
+  - fecha: 2026-11-22
+    tema: T02
+    dijo: "Fills de snare muy fuertes a -14 dB"
+    cambio: "snare_fill.nivel_db = -17"
+  - fecha: 2026-11-22
+    tema: T02
+    dijo: "Regla de oro: nunca automatizar el volumen del track"
+    cambio: "D-15: lo que se automatiza es el Output de un Utility al final de la cadena"
+  - fecha: 2026-11-22
+    tema: T02
+    dijo: "Puente = tension continua; los elementos entran de a poco salvo culminacion de riser"
+    cambio: "reglas.puente"
