@@ -117,6 +117,41 @@ print(live_ping(client))
 print(live_get_state(client))
 ```
 
+## Usar desde Claude Code
+
+El nexo se usa desde Claude Code con la suscripcion (sin API key): un servidor MCP stdio local
+(`mcp_server/abletonbridge_mcp/stdio_server.py`) que expone los `live_*` como tools, mas la skill
+`nexo-ableton` (`.claude/skills/nexo-ableton/`) con las reglas y el conocimiento.
+
+1. **Live abierto** con el Remote Script cargado (ver "Instalacion del Remote Script"). El servidor
+   MCP se conecta de forma perezosa a `127.0.0.1:19845`: si Live se abre despues, la primera tool
+   que uses conecta; si Live se reinicia, la siguiente llamada reconecta.
+2. **Venv e instalacion** (una vez, en PowerShell, desde la raiz del repo):
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   ```
+3. **Registro del servidor.** El repo trae `.mcp.json` (scope project) apuntando a
+   `C:\Users\Gabriel Maglia\abletonBridge\.venv\Scripts\python.exe -m mcp_server.abletonbridge_mcp`
+   con `PYTHONPATH` a la raiz. Si moves el repo, edita las rutas. Alternativa por CLI
+   (scope user, sin `.mcp.json`):
+   ```powershell
+   claude mcp add --transport stdio --scope user nexo-ableton `
+     --env PYTHONPATH="C:\Users\Gabriel Maglia\abletonBridge" -- `
+     "C:\Users\Gabriel Maglia\abletonBridge\.venv\Scripts\python.exe" -m mcp_server.abletonbridge_mcp
+   ```
+4. **Reiniciar Claude Code** en la carpeta del repo y aprobar el servidor del proyecto cuando
+   lo pida (los `.mcp.json` piden confirmacion la primera vez).
+5. **Verificar**: `/mcp` debe listar `nexo-ableton` como connected (con ~35 tools). Probar:
+   "hace un `live_ping`". La skill se activa sola al hablar de producir en Ableton, o con
+   `/nexo-ableton`.
+
+Notas: los resultados mayores a ~60k caracteres se vuelcan a `.cache/mcp_results/` (Claude Code
+corta las respuestas MCP en ~25k tokens). Las tools `live_spike_*` (spikes temporales) no se
+registran salvo que arranques el servidor con `NEXO_MCP_SPIKES=1`. Prueba manual sin Claude Code:
+`.\.venv\Scripts\python.exe -m mcp_server.abletonbridge_mcp` queda esperando JSON-RPC por stdin
+y sale limpio al cerrar stdin (Ctrl+Z, Enter).
+
 ## Tests
 
 ```bash

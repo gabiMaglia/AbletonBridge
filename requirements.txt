@@ -4,3 +4,6 @@
 # ADR-001 en engram/02_architecture.md).
 
 pytest>=8.0
+# T-016: SDK oficial de MCP (servidor stdio). Probado SOLO con 2.3.0; el codigo
+# tiene un fallback a FastMCP (1.x) que no se probo.
+mcp>=1.2

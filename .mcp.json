@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "nexo-ableton": {
+      "type": "stdio",
+      "command": "C:\\Users\\Gabriel Maglia\\abletonBridge\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "mcp_server.abletonbridge_mcp"],
+      "env": {
+        "PYTHONPATH": "C:\\Users\\Gabriel Maglia\\abletonBridge",
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
