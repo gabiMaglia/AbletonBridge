@@ -636,6 +636,32 @@ def _marker_rows(clip: Any) -> List[Dict[str, float]]:
     return rows
 
 
+def _add_warp_marker(clip: Any, beat_time: float, sample_time: float) -> None:
+    """
+    En Live 12.4 `Clip.add_warp_marker` recibe UN objeto warp marker, no (beat, sample):
+    (float, float) da ArgumentError (visto en real). Se prueba Live.Clip.WarpMarker y, si no
+    existe o no se acepta, un dict con las mismas claves (formato de la API de Max for Live).
+    """
+    candidates: List[Any] = []
+    try:
+        import Live  # solo existe dentro de Live
+
+        marker_cls = getattr(Live.Clip, "WarpMarker", None)
+        if marker_cls is not None:
+            candidates.append(lambda: marker_cls(beat_time=beat_time, sample_time=sample_time))
+    except ImportError:
+        pass
+    candidates.append(lambda: {"beat_time": beat_time, "sample_time": sample_time})
+    errors: List[str] = []
+    for build in candidates:
+        try:
+            clip.add_warp_marker(build())
+            return
+        except Exception as exc:  # noqa: BLE001 - se prueba la siguiente forma
+            errors.append(f"{type(exc).__name__}: {exc}")
+    raise RuntimeError("add_warp_marker rejected every form: " + " | ".join(errors))
+
+
 def _force_warp_markers(clip: Any, sample_beats: float, secs: float) -> None:
     """
     Deja SOLO dos markers: (0 beat, 0 s) y (sample_beats, secs), asi todo el sample cae en
@@ -643,14 +669,13 @@ def _force_warp_markers(clip: Any, sample_beats: float, secs: float) -> None:
     intermedios (incluido el ancla automatico pegado al inicio, ej. beat 0.03125).
     """
     if not any(abs(r["beat_time"] - sample_beats) <= MARKER_TOL for r in _marker_rows(clip)):
-        # VERIFICAR EN LIVE: add_warp_marker(beat_time, sample_time) con sample_time explicito
-        clip.add_warp_marker(sample_beats, secs)
+        _add_warp_marker(clip, sample_beats, secs)
     for row in _marker_rows(clip):
         beat = row["beat_time"]
         if abs(beat) > MARKER_TOL and abs(beat - sample_beats) > MARKER_TOL:
             clip.remove_warp_marker(beat)
     if not any(abs(r["beat_time"]) <= MARKER_TOL for r in _marker_rows(clip)):
-        clip.add_warp_marker(0.0, 0.0)
+        _add_warp_marker(clip, 0.0, 0.0)
     rows = sorted(_marker_rows(clip), key=lambda r: r["beat_time"])
     first, last = rows[0], rows[-1]
     if abs(first["beat_time"]) > MARKER_TOL or abs(first["sample_time"]) > MARKER_TOL:

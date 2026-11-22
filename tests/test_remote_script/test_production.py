@@ -146,9 +146,14 @@ class AClip(EnvMixin):
         self.warp_markers = [types.SimpleNamespace(beat_time=0.0, sample_time=0.0),
                              types.SimpleNamespace(beat_time=0.03125, sample_time=0.0146)]
 
-    def add_warp_marker(self, beat_time, sample_time=None):
+    def add_warp_marker(self, warp_marker):
+        # Live 12.4 real: un solo argumento (objeto warp marker); (float, float) da ArgumentError
         if self._fail_warp:
             raise RuntimeError("add_warp_marker refused")
+        if isinstance(warp_marker, dict):
+            beat_time, sample_time = warp_marker["beat_time"], warp_marker["sample_time"]
+        else:
+            beat_time, sample_time = warp_marker.beat_time, warp_marker.sample_time
         self.warp_markers.append(types.SimpleNamespace(beat_time=beat_time, sample_time=sample_time))
         self.warp_markers.sort(key=lambda m: m.beat_time)
 
