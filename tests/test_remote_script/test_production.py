@@ -28,6 +28,7 @@ class Mixer:
     def __init__(self):
         self.volume = Param("Volume", 0.0, 1.0, 0.85, _db)
         self.panning = Param("Pan", -1.0, 1.0, 0.0, lambda v: f"{v:.2f}")
+        self.sends = [Param("A", 0.0, 1.0, 0.0, _db), Param("B", 0.0, 1.0, 0.0, _db)]
 
 
 class Device:
@@ -135,6 +136,7 @@ class Cue:
 class Song:
     def __init__(self):
         self.tracks = []
+        self.return_tracks = []
         self.tempo, self.signature_numerator, self.signature_denominator = 120.0, 4, 4
         self.loop_start, self.loop_length, self.loop = 0.0, 16.0, False
         self._time, self._pending, self.cue_points = 0.0, None, []
@@ -153,6 +155,11 @@ class Song:
 
     def delete_track(self, i):
         del self.tracks[i]
+
+    def create_return_track(self, *args):
+        if args:
+            raise TypeError("create_return_track takes no arguments")
+        self.return_tracks.append(Track(self, False, "New Return"))
 
     @property
     def current_song_time(self):
@@ -588,3 +595,90 @@ def test_parse_db() -> None:
     assert production.parse_db("−6.0 dB") == -6.0
     assert production.parse_db("0.00") == 0.0
     assert production.parse_db("garbage") is None
+
+
+# --- sends y returns (T-009) -------------------------------------------------
+
+
+@pytest.fixture
+def rsong(song):
+    song.create_return_track()
+    song.create_return_track()
+    song.return_tracks[0].name, song.return_tracks[1].name = "A-Reverb", "B-Delay"
+    song.return_tracks[0].devices.append(Device("Reverb"))
+    return song
+
+
+def test_set_send_bisects_db(rsong) -> None:
+    out = production.track_set_send(rsong, {"track": 0, "send": 1, "db": -12})
+    assert abs(float(out["display"].split()[0]) + 12) <= 0.1 + 1e-9
+    assert out["within_tolerance"] is True
+    assert out["value"] == rsong.tracks[0].mixer_device.sends[1].value
+    assert rsong.tracks[0].mixer_device.sends[0].value == 0.0
+
+
+def test_set_send_minus_inf_and_unreachable(rsong) -> None:
+    rsong.tracks[0].mixer_device.sends[0].value = 0.5
+    out = production.track_set_send(rsong, {"track": 0, "send": 0, "db": "-inf"})
+    assert out["value"] == 0.0 and out["display"] == "-inf dB"
+    out = production.track_set_send(rsong, {"track": 0, "send": 0, "db": 30})
+    assert out["within_tolerance"] is False
+
+
+@pytest.mark.parametrize("bad", [
+    {"track": 0, "send": 2, "db": -6}, {"track": 0, "send": -1, "db": -6},
+    {"track": 0, "send": True, "db": -6}, {"track": 0, "send": 0},
+    {"track": 0, "send": 0, "db": "loud"}, {"track": 0, "db": -6},
+])
+def test_set_send_invalid(rsong, bad) -> None:
+    assert code_of(production.track_set_send, rsong, bad) == errors.INVALID_PARAMS
+
+
+def test_set_send_track_not_found(rsong) -> None:
+    assert code_of(production.track_set_send, rsong, {"track": 9, "send": 0, "db": 0}) == errors.TRACK_NOT_FOUND
+
+
+def test_return_list(rsong) -> None:
+    res = production.return_list(rsong, {})
+    out = res["returns"]
+    assert res["count"] == 2 and [r["index"] for r in out] == [0, 1]
+    assert out[0]["name"] == "A-Reverb" and out[0]["devices"] == ["Reverb"]
+    assert out[1]["devices"] == []
+    assert set(out[0]["volume"]) == {"value", "display"}
+
+
+def test_return_list_empty_is_still_a_dict(song) -> None:
+    assert production.return_list(song, {}) == {"returns": [], "count": 0}
+
+
+def test_return_set_mixer(rsong) -> None:
+    out = production.return_set_mixer(rsong, {"return": 1, "volume_db": -6, "pan": 0.25, "mute": True})
+    assert out["return"] == 1
+    assert abs(float(out["volume"]["display"].split()[0]) + 6) <= 0.1 + 1e-9
+    assert out["panning"]["value"] == 0.25 and out["mute"] is True
+    assert rsong.return_tracks[1].mute is True and "solo" not in out
+
+
+def test_return_set_mixer_errors(rsong) -> None:
+    assert code_of(production.return_set_mixer, rsong, {"return": 5}) == errors.TRACK_NOT_FOUND
+    assert code_of(production.return_set_mixer, rsong, {"return": 0, "pan": 3}) == errors.INVALID_PARAMS
+    assert code_of(production.return_set_mixer, rsong, {"return": 0, "solo": True}) == errors.INVALID_PARAMS
+
+
+def test_return_device_insert_and_set_param(rsong) -> None:
+    out = production.return_device_insert(rsong, {"return": 1, "name": "Delay"})
+    assert out["index"] == 0 and out["name"] == "Delay"
+    assert [d.name for d in rsong.return_tracks[1].devices] == ["Delay"]
+    p = production.return_device_set_param(rsong, {"return": 1, "device": "Delay", "name": "Drive", "value": 0.2})
+    assert p["value"] == 0.2
+    assert code_of(production.return_device_insert, rsong, {"return": 7, "name": "Delay"}) == errors.TRACK_NOT_FOUND
+    assert code_of(production.return_device_set_param, rsong,
+                   {"return": 0, "device": "Nope", "name": "Drive", "value": 0.2}) == errors.INVALID_PARAMS
+
+
+def test_return_create_renames_and_returns_index(rsong) -> None:
+    out = production.return_create(rsong, {"name": "C-Chorus"})
+    assert out == {"index": 2, "name": "C-Chorus"}
+    out = production.return_create(rsong, {})
+    assert out["index"] == 3 and out["name"] == "New Return"
+    assert code_of(production.return_create, rsong, {"name": ""}) == errors.INVALID_PARAMS

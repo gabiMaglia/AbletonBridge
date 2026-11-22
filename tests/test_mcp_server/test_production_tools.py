@@ -62,3 +62,16 @@ def test_locator_and_delete_tools() -> None:
     assert sent(s.live_locator_clear_all) == ("locator.clear_all", {})
     assert sent(s.live_track_delete, 3, "Old") == (
         "track.delete", {"track": 3, "confirm_name": "Old"})
+
+
+def test_send_and_return_tools() -> None:
+    assert sent(s.live_track_set_send, 0, 1, -12) == ("track.set_send", {"track": 0, "send": 1, "db": -12})
+    assert sent(s.live_return_list) == ("return.list", {})
+    assert sent(s.live_return_set_mixer, 0, volume_db="-inf", mute=True) == (
+        "return.set_mixer", {"return": 0, "volume_db": "-inf", "mute": True})
+    assert sent(s.live_return_device_insert, 1, "Delay") == (
+        "return.device_insert", {"return": 1, "name": "Delay", "index": -1})
+    assert sent(s.live_return_device_set_param, 1, "Delay", "Feedback", 0.4) == (
+        "return.device_set_param", {"return": 1, "device": "Delay", "name": "Feedback", "value": 0.4})
+    assert sent(s.live_return_create, "C-Chorus") == ("return.create", {"name": "C-Chorus"})
+    assert sent(s.live_return_create) == ("return.create", {})

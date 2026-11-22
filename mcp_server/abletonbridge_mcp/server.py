@@ -187,6 +187,43 @@ def live_simpler_load(
         track=track, device=device, path=path, playback_mode=playback_mode))
 
 
+# --- Sends y returns (T-009) ---
+
+
+def live_track_set_send(client: BridgeClient, track: int, send: int, db: Any) -> Dict[str, Any]:
+    return client.send_request("track.set_send", {"track": track, "send": send, "db": db})
+
+
+def live_return_list(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("return.list", {})
+
+
+def live_return_set_mixer(
+    client: BridgeClient,
+    return_: int,
+    volume_db: Any = None,
+    pan: Optional[float] = None,
+    mute: Optional[bool] = None,
+) -> Dict[str, Any]:
+    return client.send_request("return.set_mixer", _compact(
+        **{"return": return_}, volume_db=volume_db, pan=pan, mute=mute))
+
+
+def live_return_device_insert(client: BridgeClient, return_: int, name: str, index: int = -1) -> Dict[str, Any]:
+    return client.send_request("return.device_insert", {"return": return_, "name": name, "index": index})
+
+
+def live_return_device_set_param(
+    client: BridgeClient, return_: int, device: Any, name: str, value: float
+) -> Dict[str, Any]:
+    return client.send_request("return.device_set_param", {
+        "return": return_, "device": device, "name": name, "value": value})
+
+
+def live_return_create(client: BridgeClient, name: Optional[str] = None) -> Dict[str, Any]:
+    return client.send_request("return.create", _compact(name=name))
+
+
 def live_locator_set(client: BridgeClient, time: float, name: str) -> Dict[str, Any]:
     """Encola UN locator (asincrono); ver live_locator_status."""
     return client.send_request("locator.set", {"time": time, "name": name})

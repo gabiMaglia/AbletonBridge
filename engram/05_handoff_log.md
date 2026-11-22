@@ -61,3 +61,6 @@
 
 ### 2026-11-22 nerv-orquestador->nerv-desktop T-003 fixes (primera corrida REAL en Live 12.4.16)
 - BUG 1 place_audio: markers no acortan el span de Arrangement -> ahora `Clip.crop()` + verificacion por `end_time-start_time`; cada clip devuelve `span`; warning con span real si no recorta. BUG 2 locators: `current_song_time` se aplica en un tick posterior -> `production.LocatorQueue` (maquina de estados desde `_tick`), cmds `locator.set` (queued), `locator.set_many`, `locator.status`, `locator.clear_all` async; tools MCP `live_locator_set_many`, `live_locator_status`. Tests 186 verdes (fakes modelan span independiente y playhead diferido). En revision QA. Re-probar en Live (ver VERIFICAR EN LIVE 3 y 5).
+
+### 2026-11-22 nerv-orquestador->nerv-desktop T-009 (sends y returns)
+- Agregados `track.set_send`, `return.list/set_mixer/device_insert/device_set_param/create` + 6 tools MCP `live_*`. Refactor: helpers `_db_arg`/`_set_db` (biseccion compartida), `_apply_mixer`, `_insert_device`/`_set_device_param` aceptan un objeto track (tracks y returns). `return.list` devuelve `{returns, count}` (no lista pelada). Tests 202 verdes. En revision QA. Sin probar en Live real (ver VERIFICAR EN LIVE T-009 en contrato). No existe engram/plans/T-009.md (plan gate sin estampar).

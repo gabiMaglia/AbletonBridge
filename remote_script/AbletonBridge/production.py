@@ -94,6 +94,13 @@ def _track(song: Any, params: Dict[str, Any], key: str = "track") -> Tuple[int, 
     return idx, song.tracks[idx]
 
 
+def _return(song: Any, params: Dict[str, Any]) -> Tuple[int, Any]:
+    idx = params.get("return")
+    if not _is_int(idx) or not 0 <= idx < len(song.return_tracks):
+        raise CommandError(errors.TRACK_NOT_FOUND, f"return {idx!r} not found")
+    return idx, song.return_tracks[idx]
+
+
 def _step(steps: Dict[str, Any], name: str, fn: Callable[[], Any]) -> Tuple[bool, Any]:
     try:
         value = fn()
@@ -165,6 +172,32 @@ def find_raw_for_db(lo: float, hi: float, display_of: Callable[[float], Any],
     return best, best_err <= tol + 1e-9
 
 
+def _db_arg(params: Dict[str, Any], key: str) -> Optional[Tuple[Optional[float], bool]]:
+    """(objetivo_dB, es_-inf) o None si la clave no vino."""
+    raw = params.get(key)
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        if raw.strip().lower() not in ("-inf", "-infinity"):
+            raise _bad(f"{key} must be a number or '-inf'")
+        return None, True
+    if not _is_num(raw):
+        raise _bad(f"{key} must be a number or '-inf'")
+    return float(raw), False
+
+
+def _set_db(param: Any, target: Tuple[Optional[float], bool]) -> Dict[str, Any]:
+    """Biseccion de `param` (volume/send) hasta `target` dB; readback + within_tolerance."""
+    db, minus_inf = target
+    within = True
+    if minus_inf:
+        param.value = param.min
+    else:
+        raw, within = find_raw_for_db(float(param.min), float(param.max), param.str_for_value, db)
+        param.value = raw
+    return dict(_readback(param), within_tolerance=within)
+
+
 def _readback(param: Any) -> Dict[str, Any]:
     return {"value": float(param.value), "display": param.str_for_value(param.value)}
 
@@ -234,34 +267,18 @@ def track_delete(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     return {"deleted": current, "index": idx, "track_count": len(song.tracks)}
 
 
-def track_set_mixer(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
-    idx, track = _track(song, params)
-    raw_db = params.get("volume_db")
-    target_db: Optional[float] = None
-    minus_inf = False
-    if isinstance(raw_db, str):
-        if raw_db.strip().lower() not in ("-inf", "-infinity"):
-            raise _bad("volume_db must be a number or '-inf'")
-        minus_inf = True
-    elif raw_db is not None:
-        if not _is_num(raw_db):
-            raise _bad("volume_db must be a number or '-inf'")
-        target_db = float(raw_db)
+def _apply_mixer(track: Any, params: Dict[str, Any], out: Dict[str, Any], allow_solo: bool) -> Dict[str, Any]:
+    """Cuerpo comun de track.set_mixer / return.set_mixer (valida todo antes de escribir)."""
+    vol = _db_arg(params, "volume_db")
     pan = _num(params, "pan", lo=-1.0, hi=1.0)
     mute = _opt_bool(params, "mute")
-    solo = _opt_bool(params, "solo")
+    solo = _opt_bool(params, "solo") if allow_solo else None
+    if not allow_solo and params.get("solo") is not None:
+        raise _bad("solo is not available on return tracks")
 
-    out: Dict[str, Any] = {"track": idx}
     mixer = track.mixer_device
-    if minus_inf or target_db is not None:
-        vol = mixer.volume
-        within = True
-        if minus_inf:
-            vol.value = vol.min
-        else:
-            raw, within = find_raw_for_db(float(vol.min), float(vol.max), vol.str_for_value, target_db)
-            vol.value = raw
-        out["volume"] = dict(_readback(vol), within_tolerance=within)
+    if vol is not None:
+        out["volume"] = _set_db(mixer.volume, vol)
     if pan is not None:
         mixer.panning.value = pan
         out["panning"] = _readback(mixer.panning)
@@ -272,6 +289,52 @@ def track_set_mixer(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
         track.solo = solo
         out["solo"] = bool(track.solo)
     return out
+
+
+def track_set_mixer(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    idx, track = _track(song, params)
+    return _apply_mixer(track, params, {"track": idx}, allow_solo=True)
+
+
+# --- sends / returns (T-009) -------------------------------------------------
+
+
+def track_set_send(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    _, track = _track(song, params)
+    send = params.get("send")
+    sends = list(track.mixer_device.sends)
+    if not _is_int(send) or not 0 <= send < len(sends):
+        raise _bad(f"send must be an integer in [0, {len(sends) - 1}]")
+    target = _db_arg(params, "db")
+    if target is None:
+        raise _bad("db is required (number or '-inf')")
+    return _set_db(sends[send], target)
+
+
+def return_list(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    # Envuelto en dict: el protocolo es de objetos y el cliente convierte [] vacio en {}
+    returns = [
+        {"index": i, "name": str(t.name), "devices": [str(d.name) for d in t.devices],
+         "volume": _readback(t.mixer_device.volume)}
+        for i, t in enumerate(song.return_tracks)
+    ]
+    return {"returns": returns, "count": len(returns)}
+
+
+def return_set_mixer(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    idx, track = _return(song, params)
+    return _apply_mixer(track, params, {"return": idx}, allow_solo=False)
+
+
+def return_create(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    name = params.get("name")
+    if name is not None:
+        name = _name(params, "name")
+    song.create_return_track()  # VERIFICAR EN LIVE: sin argumentos, agrega al final
+    idx = len(song.return_tracks) - 1
+    if name is not None:
+        song.return_tracks[idx].name = name
+    return {"index": idx, "name": str(song.return_tracks[idx].name)}
 
 
 # --- clip.place_audio ----------------------------------------------------
@@ -521,8 +584,7 @@ def _device(track: Any, params: Dict[str, Any]) -> Tuple[int, Any]:
     raise _bad(f"device {spec!r} not found on the track (index or exact name)")
 
 
-def device_insert(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
-    _, track = _track(song, params)
+def _insert_device(track: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     name = _name(params, "name")
     index = params.get("index", -1)
     count = len(track.devices)
@@ -535,8 +597,15 @@ def device_insert(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     return {"index": pos, "class_name": lom_read.get(dev, "class_name"), "name": lom_read.get(dev, "name")}
 
 
-def device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
-    _, track = _track(song, params)
+def device_insert(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    return _insert_device(_track(song, params)[1], params)
+
+
+def return_device_insert(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    return _insert_device(_return(song, params)[1], params)
+
+
+def _set_device_param(track: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     dev_index, dev = _device(track, params)
     name = _name(params, "name")
     value = params.get("value")
@@ -550,6 +619,14 @@ def device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
     param.value = float(value)
     return {"device": dev_index, "name": name, "min": float(param.min), "max": float(param.max),
             **_readback(param)}
+
+
+def device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    return _set_device_param(_track(song, params)[1], params)
+
+
+def return_device_set_param(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    return _set_device_param(_return(song, params)[1], params)
 
 
 def simpler_load(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:

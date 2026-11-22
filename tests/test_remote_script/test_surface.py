@@ -139,7 +139,8 @@ def test_production_handlers_registered(instance) -> None:
     for cmd in ("song.set", "track.create", "track.set_mixer", "clip.place_audio",
                 "clip.create_midi", "device.insert", "device.set_param", "simpler.load",
                 "locator.set", "locator.set_many", "locator.status", "locator.clear_all",
-                "track.delete"):
+                "track.delete", "track.set_send", "return.list", "return.set_mixer",
+                "return.device_insert", "return.device_set_param", "return.create"):
         assert cmd in instance.server._handlers
 
 
