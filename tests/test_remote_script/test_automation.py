@@ -57,9 +57,17 @@ class Song:
         self.master_track = Track("Master")
         self.master_track.mixer_device.sends = []
         self.calls: List[str] = []
+        self.insert_marker = 40.0
 
     def start_playing(self):
+        # Live real: start_playing arranca desde el marcador de inicio, no desde current_song_time
         self.calls.append("start")
+        self.current_song_time = self.insert_marker
+        self.is_playing = True
+
+    def continue_playing(self):
+        # Live real: continue_playing arranca desde current_song_time
+        self.calls.append("continue")
         self.is_playing = True
 
     def stop_playing(self):
@@ -192,7 +200,7 @@ def test_transport_starts_only_after_the_playhead_arrives() -> None:
     assert rec.phase == "seeking" and song.calls == []
     song.current_song_time = 4.0
     rec.tick(song)
-    assert rec.phase == "preroll" and song.calls == ["start"]
+    assert rec.phase == "preroll" and song.calls == ["continue"]
 
 
 def test_punch_in_exactly_when_song_time_reaches_start_beat() -> None:
@@ -472,3 +480,16 @@ def test_runtime_tick_survives_a_broken_recorder() -> None:
     rt.automation.tick = lambda song: (_ for _ in ()).throw(RuntimeError("boom"))
     rt.tick()
     assert any("automation" in m for m in logs)
+
+
+def test_transport_starts_from_seek_position_not_insert_marker():
+    # Visto en Live 12.4.16: start_playing() arranca desde el marcador de inicio (ej. 160)
+    # aunque current_song_time apunte al preroll; hay que usar continue_playing().
+    song = Song()
+    rec = automation.AutomationRecorder(clock=Clock())
+    rec.record(song, {"start_beat": 100.0, "end_beat": 108.0, "preroll_beats": 4,
+                      "lanes": [{"track": 0, "target": "volume", "points": [[100.0, 0.2], [108.0, 0.8]]}]})
+    for _ in range(3):
+        rec.tick(song)
+    assert "continue" in song.calls and "start" not in song.calls
+    assert song.current_song_time == 96.0

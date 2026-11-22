@@ -243,7 +243,10 @@ class AutomationRecorder:
         # Live aplica current_song_time en un tick posterior: no arrancar hasta que llegue.
         if abs(float(song.current_song_time) - self._seek_to) > SEEK_TOL:
             return
-        song.start_playing()
+        # start_playing() arranca desde el marcador de inicio del Arrangement (visto en Live
+        # 12.4.16: pedido 712, arrancó en 160); continue_playing() respeta current_song_time.
+        play = getattr(song, "continue_playing", None) or song.start_playing
+        play()
         self.phase = "preroll"
 
     def _preroll(self, song: Any) -> None:
