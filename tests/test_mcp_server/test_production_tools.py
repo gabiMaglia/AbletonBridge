@@ -56,6 +56,9 @@ def test_device_tools() -> None:
 
 def test_locator_and_delete_tools() -> None:
     assert sent(s.live_locator_set, 64.0, "DROP") == ("locator.set", {"time": 64.0, "name": "DROP"})
+    items = [{"time": 0.0, "name": "IN"}, {"time": 96.0, "name": "OUT"}]
+    assert sent(s.live_locator_set_many, items) == ("locator.set_many", {"items": items})
+    assert sent(s.live_locator_status) == ("locator.status", {})
     assert sent(s.live_locator_clear_all) == ("locator.clear_all", {})
     assert sent(s.live_track_delete, 3, "Old") == (
         "track.delete", {"track": 3, "confirm_name": "Old"})

@@ -138,5 +138,20 @@ def test_state_detail_handler_registered(instance) -> None:
 def test_production_handlers_registered(instance) -> None:
     for cmd in ("song.set", "track.create", "track.set_mixer", "clip.place_audio",
                 "clip.create_midi", "device.insert", "device.set_param", "simpler.load",
-                "locator.set", "locator.clear_all", "track.delete"):
+                "locator.set", "locator.set_many", "locator.status", "locator.clear_all",
+                "track.delete"):
         assert cmd in instance.server._handlers
+
+
+def test_tick_advances_locator_queue_and_survives_its_errors(instance) -> None:
+    calls = []
+    instance.locators.tick = lambda song: calls.append(song)
+    instance._tick()
+    assert len(calls) == 1
+
+    def boom(song):
+        raise RuntimeError("loc")
+
+    instance.locators.tick = boom
+    instance._tick()  # no debe propagar ni frenar el pump
+    assert any("locator" in m for m in instance.logs)

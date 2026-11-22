@@ -11,6 +11,7 @@ Stdlib pura.
 import math
 import os
 import re
+import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import errors, lom_read
@@ -293,21 +294,40 @@ def _set_range(clip: Any, start_attr: str, end_attr: str, start: float, end: flo
         setattr(clip, end_attr, end)
 
 
-def _trim(clip: Any, target: float, steps: Dict[str, Any], prefix: str) -> bool:
-    """Recorta el clip a `target` beats moviendo end_marker/loop_end. True si la longitud quedo."""
-    # VERIFICAR EN LIVE: si recortar end_marker alcanza en clips de Arrangement o hace falta loop_end
+def _span(clip: Any) -> Optional[float]:
+    """Largo real en Arrangement (end_time - start_time); NO es clip.length."""
+    start = lom_read.safe(lambda: float(clip.start_time))
+    end = lom_read.safe(lambda: float(clip.end_time))
+    return end - start if isinstance(start, float) and isinstance(end, float) else None
+
+
+def _trim(clip: Any, target: float, steps: Dict[str, Any], prefix: str) -> None:
+    """Mueve end_marker/loop_end a `target` beats. Solo cambia `length`; el span lo fija _fit_span."""
+    # VERIFICAR EN LIVE: si recortar end_marker alcanza o hace falta loop_end
     _step(steps, f"{prefix}_trim_end_marker",
           lambda: setattr(clip, "end_marker", float(clip.start_marker) + target))
     _step(steps, f"{prefix}_trim_loop_end",
           lambda: setattr(clip, "loop_end", float(clip.loop_start) + target))
-    length = lom_read.safe(lambda: float(clip.length))
-    return isinstance(length, float) and abs(length - target) <= 1e-3
+
+
+def _fit_span(clip: Any, target: float, steps: Dict[str, Any], prefix: str) -> bool:
+    """
+    En Live 12 los markers no acortan el clip de Arrangement: hace falta Clip.crop().
+    Devuelve True si end_time - start_time quedo en `target`.
+    """
+    span = _span(clip)
+    if span is None or abs(span - target) > 1e-3:
+        # VERIFICAR EN LIVE: Clip.crop() sobre un clip de Arrangement ajusta start/end_time
+        _step(steps, f"{prefix}_crop", lambda: clip.crop())
+        span = _span(clip)
+    return span is not None and abs(span - target) <= 1e-3
 
 
 def _clip_summary(clip: Any) -> Dict[str, Any]:
     return {
         "start_time": lom_read.get(clip, "start_time"),
         "end_time": lom_read.get(clip, "end_time"),
+        "span": _span(clip),
         "length": lom_read.get(clip, "length"),
         "warp_mode": lom_read.get(clip, "warp_mode"),
         "pitch_coarse": lom_read.get(clip, "pitch_coarse"),
@@ -368,14 +388,18 @@ def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
             warnings.append(f"{key}: clip has no usable length ({length}); stopped tiling")
             clips.append(_clip_summary(clip))
             break
+        target = length
         if length > remaining + EPS:
-            if not _trim(clip, remaining, steps, key):
-                warnings.append(f"{key}: trim to {remaining} beats not applied; clip overruns the requested length")
-                trim_failed = True
-            length = remaining
+            _trim(clip, remaining, steps, key)
+            target = remaining
+        if not _fit_span(clip, target, steps, key):
+            actual = _span(clip)
+            warnings.append(f"{key}: trim to {target} beats not applied; arrangement span is "
+                            f"{actual} beats (end_time - start_time), the clip overruns the requested length")
+            trim_failed = True
         clips.append(_clip_summary(clip))
-        pos += length
-        remaining -= length
+        pos += target
+        remaining -= target
         n += 1
 
     if remaining > EPS and n >= MAX_COPIES:
@@ -561,43 +585,154 @@ def _cue_at(song: Any, time: float) -> Any:
     return next((c for c in song.cue_points if abs(float(c.time) - time) < EPS), None)
 
 
-def locator_set(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
-    time = _req_num(params, "time", lo=0.0)
-    name = _name(params, "name")
-    previous = song.current_song_time
-    try:
-        song.current_song_time = time
-        # set_or_delete_cue alterna: si ya hay cue en ese tiempo lo borraria
-        if _cue_at(song, time) is None:
-            song.set_or_delete_cue()
-        cue = _cue_at(song, time)
-        if cue is None:
-            raise RuntimeError("cue point was not created at the requested time")
-        cue.name = name
-    finally:
-        try:
-            song.current_song_time = previous
-        except Exception:  # noqa: BLE001 - restaurar la posicion es best-effort
-            pass
-    return {"cue_points": _cues(song)}
+MAX_LOCATOR_ITEMS = 256
+LOCATOR_TIME_TOL = 0.01
+LOCATOR_TIMEOUT_S = 2.0
 
 
-def locator_clear_all(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
-    previous = song.current_song_time
-    removed = 0
-    try:
-        for _ in range(1000):
-            cues = list(song.cue_points)
-            if not cues:
-                break
-            song.current_song_time = float(cues[0].time)
-            song.set_or_delete_cue()
-            if len(list(song.cue_points)) >= len(cues):
-                break  # sin progreso: no insistir
-            removed += 1
-    finally:
+def _cue_near(song: Any, time_: float) -> Any:
+    return next((c for c in song.cue_points if abs(float(c.time) - time_) <= LOCATOR_TIME_TOL), None)
+
+
+class LocatorQueue:
+    """
+    Locators asincronos: Live aplica `current_song_time` en un tick posterior, asi que
+    mover el playhead y llamar set_or_delete_cue en la misma llamada opera sobre la
+    posicion VIEJA. Maquina de estados avanzada desde surface._tick:
+      moving (espera playhead ~ target) -> act (set/delete cue) -> verify (renombra / confirma)
+    y al vaciar la cola se restaura el playhead original.
+    """
+
+    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
+        self._clock = clock
+        self._queue: List[Dict[str, Any]] = []
+        self._cur: Optional[Dict[str, Any]] = None
+        self._phase = "idle"
+        self._deadline = 0.0
+        self._previous: Optional[float] = None
+        self._restore = False
+        self._next_id = 0
+        self._last_id: Optional[int] = None
+        self._done: List[Dict[str, Any]] = []
+        self._errors: List[Dict[str, Any]] = []
+
+    # -- API de comandos --
+
+    def set_many(self, song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+        items = params.get("items")
+        if not isinstance(items, list) or not 1 <= len(items) <= MAX_LOCATOR_ITEMS:
+            raise _bad(f"items must be a list of 1..{MAX_LOCATOR_ITEMS} objects")
+        ops = []
+        for i, it in enumerate(items):
+            if not isinstance(it, dict):
+                raise _bad(f"items[{i}] must be an object")
+            t = it.get("time")
+            if not _is_num(t) or t < 0:
+                raise _bad(f"items[{i}].time must be a number >= 0")
+            n = it.get("name")
+            if not isinstance(n, str) or not n.strip():
+                raise _bad(f"items[{i}].name must be a non-empty string")
+            ops.append({"op": "set", "time": float(t), "name": n})
+        return self._enqueue(ops)
+
+    def set(self, song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+        out = self.set_many(song, {"items": [{"time": params.get("time"), "name": params.get("name")}]})
+        return {"queued": out["queued"], "id": out["id"]}
+
+    def clear_all(self, song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+        ops = [{"op": "delete", "time": c["time"], "name": c["name"]} for c in _cues(song)]
+        if not ops:
+            return {"queued": False, "id": None, "count": 0}
+        return self._enqueue(ops)
+
+    def _enqueue(self, ops: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if not self._busy():
+            self._done, self._errors = [], []  # lote nuevo con la cola ociosa: status empieza limpio
+        self._next_id += 1
+        self._last_id = self._next_id
+        self._queue.extend(ops)
+        self._restore = False  # el playhead se restaura al terminar el lote nuevo
+        return {"queued": True, "id": self._next_id, "count": len(ops)}
+
+    def _busy(self) -> bool:
+        return bool(self._queue) or self._cur is not None
+
+    def status(self, song: Any) -> Dict[str, Any]:
+        return {
+            "pending": len(self._queue) + (1 if self._cur is not None else 0),
+            "done": list(self._done),
+            "errors": list(self._errors),
+            "id": self._last_id,
+            "cue_points": _cues(song),
+        }
+
+    # -- maquina de estados --
+
+    def tick(self, song: Any) -> None:
+        if self._cur is None:
+            if self._queue:
+                self._start_next(song)
+            elif self._restore:
+                self._restore = False
+                self._restore_playhead(song)
+            return
+        cur = self._cur
         try:
-            song.current_song_time = previous
-        except Exception:  # noqa: BLE001
-            pass
-    return {"removed": removed, "cue_points": _cues(song)}
+            if self._clock() > self._deadline:
+                raise TimeoutError(f"timeout in phase {self._phase}")
+            if self._phase == "moving":
+                if abs(float(song.current_song_time) - cur["time"]) <= LOCATOR_TIME_TOL:
+                    self._act(song, cur)
+            elif self._phase == "verify":
+                self._verify(song, cur)
+        except TimeoutError as exc:
+            self._fail(cur, str(exc))
+        except Exception as exc:  # noqa: BLE001 - un item roto no traba la cola
+            self._fail(cur, f"{type(exc).__name__}: {exc}")
+
+    def _start_next(self, song: Any) -> None:
+        if self._previous is None:
+            self._previous = float(song.current_song_time)
+        cur = self._queue.pop(0)
+        self._cur, self._phase = cur, "moving"
+        self._deadline = self._clock() + LOCATOR_TIMEOUT_S
+        try:
+            song.current_song_time = cur["time"]
+        except Exception as exc:  # noqa: BLE001
+            self._fail(cur, f"{type(exc).__name__}: {exc}")
+
+    def _act(self, song: Any, cur: Dict[str, Any]) -> None:
+        # set_or_delete_cue alterna: crear solo si no hay cue, borrar solo si hay
+        exists = _cue_near(song, cur["time"]) is not None
+        if (cur["op"] == "set") != exists:
+            song.set_or_delete_cue()
+        self._phase = "verify"
+        self._deadline = self._clock() + LOCATOR_TIMEOUT_S
+
+    def _verify(self, song: Any, cur: Dict[str, Any]) -> None:
+        cue = _cue_near(song, cur["time"])
+        if cur["op"] == "set":
+            if cue is None:
+                return  # puede aparecer en el proximo tick; el timeout corta
+            cue.name = cur["name"]
+        elif cue is not None:
+            return
+        self._done.append({"name": cur["name"], "time": cur["time"]})
+        self._finish()
+
+    def _fail(self, cur: Dict[str, Any], error: str) -> None:
+        self._errors.append({"name": cur["name"], "time": cur["time"], "error": error})
+        self._finish()
+
+    def _finish(self) -> None:
+        self._cur, self._phase = None, "idle"
+        if not self._queue:
+            self._restore = True
+
+    def _restore_playhead(self, song: Any) -> None:
+        previous, self._previous = self._previous, None
+        if previous is not None:
+            try:
+                song.current_song_time = previous
+            except Exception:  # noqa: BLE001 - restaurar la posicion es best-effort
+                pass

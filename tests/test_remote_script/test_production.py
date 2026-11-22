@@ -55,8 +55,10 @@ class Simpler(Device):
 class AClip:
     """Clip de audio: length = end_marker - start_marker, como en Live."""
 
-    def __init__(self, path, start, natural, honor_trim=True, gain_display=True):
+    def __init__(self, path, start, natural, honor_trim=True, gain_display=True, honor_crop=True):
         self.file_path, self.start_time = path, start
+        # Como en Live 12: el span en Arrangement no sigue a los markers hasta crop()
+        self._end_time, self._honor_crop = start + natural, honor_crop
         self.start_marker, self.end_marker = 0.0, natural
         self.loop_start, self.loop_end, self.looping = 0.0, natural, False
         self.warping, self.warp_mode, self.pitch_coarse, self.gain = True, 0, 0, 0.4
@@ -68,7 +70,11 @@ class AClip:
 
     @property
     def end_time(self):
-        return self.start_time + self.length
+        return self._end_time
+
+    def crop(self):
+        if self._honor_crop:
+            self._end_time = self.start_time + self.length
 
     @property
     def gain_display_string(self):
@@ -103,7 +109,8 @@ class Track:
         self.mixer_device, self.devices, self.arrangement_clips = Mixer(), [], []
 
     def create_audio_clip(self, path, pos):
-        clip = AClip(path, pos, self._song.natural, self._song.honor_trim, self._song.gain_display)
+        clip = AClip(path, pos, self._song.natural, self._song.honor_trim, self._song.gain_display,
+                     self._song.honor_crop)
         self.arrangement_clips.append(clip)
         return clip
 
@@ -130,8 +137,10 @@ class Song:
         self.tracks = []
         self.tempo, self.signature_numerator, self.signature_denominator = 120.0, 4, 4
         self.loop_start, self.loop_length, self.loop = 0.0, 16.0, False
-        self.current_song_time, self.cue_points = 0.0, []
+        self._time, self._pending, self.cue_points = 0.0, None, []
+        self.freeze_playhead = False
         self.natural, self.honor_trim, self.gain_display = 8.0, True, True
+        self.honor_crop = True
 
     def create_audio_track(self, i):
         self._add(False, i)
@@ -145,12 +154,25 @@ class Song:
     def delete_track(self, i):
         del self.tracks[i]
 
+    @property
+    def current_song_time(self):
+        return self._time
+
+    @current_song_time.setter
+    def current_song_time(self, v):
+        # Live aplica el cambio de playhead recien en un tick posterior
+        self._pending = v
+
+    def apply_pending(self):
+        if self._pending is not None and not self.freeze_playhead:
+            self._time, self._pending = self._pending, None
+
     def set_or_delete_cue(self):
         for c in list(self.cue_points):
-            if abs(c.time - self.current_song_time) < 1e-6:
+            if abs(c.time - self._time) < 1e-6:
                 self.cue_points.remove(c)
                 return
-        self.cue_points.append(Cue(self.current_song_time))
+        self.cue_points.append(Cue(self._time))
 
 
 LIVE = types.SimpleNamespace(Clip=types.SimpleNamespace(
@@ -296,6 +318,25 @@ def test_place_audio_tiles_and_trims_last(song, wav) -> None:
 def test_place_audio_trims_long_file(song, wav) -> None:
     out = place(song, wav, length_beats=4.0)
     assert len(out["clips"]) == 1 and out["clips"][0]["length"] == 4.0
+    c = out["clips"][0]
+    assert (c["start_time"], c["end_time"], c["span"]) == (0.0, 4.0, 4.0)
+    assert out["ok"] is True and out["warnings"] == []
+
+
+def test_place_audio_trim_shortens_arrangement_span_via_crop(song, wav) -> None:
+    song.natural = 32.0
+    out = place(song, wav, start_beat=48.0, length_beats=16.0)
+    c = out["clips"][0]
+    assert (c["start_time"], c["end_time"], c["span"], c["length"]) == (48.0, 64.0, 16.0, 16.0)
+    assert song.tracks[0].arrangement_clips[0].end_time == 64.0
+
+
+def test_place_audio_crop_ignored_reports_actual_span(song, wav) -> None:
+    song.natural, song.honor_crop = 32.0, False
+    out = place(song, wav, start_beat=48.0, length_beats=16.0)
+    assert out["ok"] is False
+    assert out["clips"][0]["span"] == 32.0
+    assert any("trim" in w and "32" in w for w in out["warnings"])
 
 
 def test_place_audio_applies_warp_and_pitch_to_every_copy(song, wav) -> None:
@@ -328,6 +369,7 @@ def test_place_audio_trim_impossible_is_reported(song, wav) -> None:
 def test_place_audio_loop_section(song, wav) -> None:
     out = place(song, wav, length_beats=4.0, loop_start=1.0, loop_end=2.0)
     assert [c["length"] for c in out["clips"]] == [1.0] * 4
+    assert [c["span"] for c in out["clips"]] == [1.0] * 4
     assert song.tracks[0].arrangement_clips[0].looping is True
 
 
@@ -446,33 +488,83 @@ def test_simpler_load_rejects_non_simpler_and_bad_path(song, wav) -> None:
 # --- locators ------------------------------------------------------------
 
 
-def test_locator_set_creates_and_names(song) -> None:
+def run(q, song, max_ticks=50):
+    """Simula los ticks del pump: cada tick avanza la maquina y luego Live aplica el playhead."""
+    for _ in range(max_ticks):
+        q.tick(song)
+        song.apply_pending()
+        if q.status(song)["pending"] == 0 and not q._restore:
+            break
+    return q.status(song)
+
+
+@pytest.fixture
+def q():
+    return production.LocatorQueue()
+
+
+def test_locator_set_is_queued_not_applied_in_same_call(song, q) -> None:
+    out = q.set_many(song, {"items": [{"time": 64.0, "name": "DROP"}]})
+    assert out["queued"] is True and "id" in out and song.cue_points == []
+    assert q.status(song)["pending"] == 1
+
+
+def test_locator_set_creates_cue_at_requested_time_and_restores_playhead(song, q) -> None:
     song.current_song_time = 5.0
-    out = production.locator_set(song, {"time": 64.0, "name": "DROP"})
-    assert out["cue_points"] == [{"name": "DROP", "time": 64.0}]
+    song.apply_pending()
+    q.set_many(song, {"items": [{"time": 0.0, "name": "IN"}, {"time": 96.0, "name": "OUT"}]})
+    st = run(q, song)
+    assert st["errors"] == [] and st["pending"] == 0
+    assert [(c["name"], c["time"]) for c in st["cue_points"]] == [("IN", 0.0), ("OUT", 96.0)]
+    assert [(d["name"], d["time"]) for d in st["done"]] == [("IN", 0.0), ("OUT", 96.0)]
+    song.apply_pending()
     assert song.current_song_time == 5.0
 
 
-def test_locator_set_renames_existing_without_deleting(song) -> None:
-    production.locator_set(song, {"time": 64.0, "name": "A"})
-    out = production.locator_set(song, {"time": 64.0, "name": "B"})
-    assert out["cue_points"] == [{"name": "B", "time": 64.0}]
+def test_locator_set_renames_existing_without_deleting(song, q) -> None:
+    q.set_many(song, {"items": [{"time": 64.0, "name": "A"}]})
+    run(q, song)
+    q.set_many(song, {"items": [{"time": 64.0, "name": "B"}]})
+    st = run(q, song)
+    assert st["cue_points"] == [{"name": "B", "time": 64.0}]
+    assert st["done"] == [{"name": "B", "time": 64.0}]
 
 
-def test_locator_set_sorted_and_validated(song) -> None:
-    production.locator_set(song, {"time": 96.0, "name": "OUT"})
-    out = production.locator_set(song, {"time": 0.0, "name": "IN"})
-    assert [c["name"] for c in out["cue_points"]] == ["IN", "OUT"]
-    assert code_of(production.locator_set, song, {"time": -1, "name": "x"}) == errors.INVALID_PARAMS
-    assert code_of(production.locator_set, song, {"time": 1, "name": ""}) == errors.INVALID_PARAMS
+def test_locator_validation(song, q) -> None:
+    bad = [{"items": []}, {"items": "x"}, {"items": [{"time": -1, "name": "x"}]},
+           {"items": [{"time": 1, "name": ""}]}, {"items": [{"time": "1", "name": "x"}]},
+           {"items": [{"time": 1, "name": "ok"}, {"time": 2}]}, {}]
+    for params in bad:
+        assert code_of(q.set_many, song, params) == errors.INVALID_PARAMS
+    assert q.status(song)["pending"] == 0
 
 
-def test_locator_clear_all(song) -> None:
-    for t in (0.0, 32.0, 64.0):
-        production.locator_set(song, {"time": t, "name": f"L{t}"})
-    out = production.locator_clear_all(song, {})
-    assert out == {"removed": 3, "cue_points": []}
+def test_locator_playhead_never_arrives_reports_timeout(song) -> None:
+    now = [0.0]
+    q = production.LocatorQueue(clock=lambda: now[0])
+    song.freeze_playhead = True
+    q.set_many(song, {"items": [{"time": 8.0, "name": "X"}]})
+    q.tick(song)
+    now[0] = 5.0
+    song.apply_pending()
+    q.tick(song)
+    st = q.status(song)
+    assert st["pending"] == 0 and len(st["errors"]) == 1
+    assert st["errors"][0]["name"] == "X" and "timeout" in st["errors"][0]["error"]
     assert song.cue_points == []
+
+
+def test_locator_clear_all_goes_through_queue(song, q) -> None:
+    for t in (0.0, 32.0, 64.0):
+        song._time = t
+        song.set_or_delete_cue()
+    song._time = 0.0
+    out = q.clear_all(song, {})
+    assert out["queued"] is True and out["count"] == 3
+    assert len(song.cue_points) == 3
+    st = run(q, song)
+    assert st["cue_points"] == [] and st["errors"] == []
+    assert len(st["done"]) == 3
 
 
 # --- track.delete --------------------------------------------------------

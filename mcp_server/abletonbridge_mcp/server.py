@@ -188,7 +188,17 @@ def live_simpler_load(
 
 
 def live_locator_set(client: BridgeClient, time: float, name: str) -> Dict[str, Any]:
+    """Encola UN locator (asincrono); ver live_locator_status."""
     return client.send_request("locator.set", {"time": time, "name": name})
+
+
+def live_locator_set_many(client: BridgeClient, items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Encola locators [{time, name}]; se procesan en orden, uno por tick de Live."""
+    return client.send_request("locator.set_many", {"items": items})
+
+
+def live_locator_status(client: BridgeClient) -> Dict[str, Any]:
+    return client.send_request("locator.status", {})
 
 
 def live_locator_clear_all(client: BridgeClient) -> Dict[str, Any]:

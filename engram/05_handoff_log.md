@@ -58,3 +58,6 @@
 
 ### 2026-11-22 nerv-orquestador->nerv-desktop T-003 (comandos de produccion v1)
 - Agregados production.py (11 comandos: song.set, track.create/set_mixer/delete, clip.place_audio/create_midi, device.insert/set_param, simpler.load, locator.set/clear_all), errors.CommandError (el servidor responde su `code` en vez de LOM_ERROR), 11 tools MCP `live_*` + seccion "Produccion v1" del contrato. Tests 181 verdes. En revision QA. Sin probar en Live real (ver VERIFICAR EN LIVE en el contrato). Nota: no existia engram/plans/T-003.md (plan gate no estampado) y el T-003 del backlog es otro ticket (Transporte).
+
+### 2026-11-22 nerv-orquestador->nerv-desktop T-003 fixes (primera corrida REAL en Live 12.4.16)
+- BUG 1 place_audio: markers no acortan el span de Arrangement -> ahora `Clip.crop()` + verificacion por `end_time-start_time`; cada clip devuelve `span`; warning con span real si no recorta. BUG 2 locators: `current_song_time` se aplica en un tick posterior -> `production.LocatorQueue` (maquina de estados desde `_tick`), cmds `locator.set` (queued), `locator.set_many`, `locator.status`, `locator.clear_all` async; tools MCP `live_locator_set_many`, `live_locator_status`. Tests 186 verdes (fakes modelan span independiente y playhead diferido). En revision QA. Re-probar en Live (ver VERIFICAR EN LIVE 3 y 5).

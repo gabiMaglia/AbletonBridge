@@ -46,6 +46,7 @@ class AbletonBridge(_Base):
         self._running = False
         self.dispatcher = UIDispatcher()
         self.spikes = spikes.RecordSpike()
+        self.locators = production.LocatorQueue()
         self.server: Optional[BridgeServer] = None
         try:
             import Live  # solo existe dentro de Live
@@ -81,8 +82,10 @@ class AbletonBridge(_Base):
             "device.insert": lambda p: production.device_insert(self.song(), p),
             "device.set_param": lambda p: production.device_set_param(self.song(), p),
             "simpler.load": lambda p: production.simpler_load(self.song(), p),
-            "locator.set": lambda p: production.locator_set(self.song(), p),
-            "locator.clear_all": lambda p: production.locator_clear_all(self.song(), p),
+            "locator.set": lambda p: self.locators.set(self.song(), p),
+            "locator.set_many": lambda p: self.locators.set_many(self.song(), p),
+            "locator.status": lambda p: self.locators.status(self.song()),
+            "locator.clear_all": lambda p: self.locators.clear_all(self.song(), p),
             "probe.api": lambda params: handlers.probe_api(self._live, self._live_info),
             "spike.automation_session": lambda p: spikes.automation_session(self.song(), self._live, p),
             "spike.automation_record_start": lambda p: self.spikes.start(self.song(), self._live, p),
@@ -108,6 +111,10 @@ class AbletonBridge(_Base):
             self.spikes.tick()  # aislado: un spike roto no frena el pump
         except Exception as exc:  # noqa: BLE001
             self.log_message(f"AbletonBridge: spike tick error: {exc!r}")
+        try:
+            self.locators.tick(self.song())
+        except Exception as exc:  # noqa: BLE001
+            self.log_message(f"AbletonBridge: locator tick error: {exc!r}")
         try:
             self.schedule_message(1, self._tick)
         except Exception as exc:  # noqa: BLE001
