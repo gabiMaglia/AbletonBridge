@@ -684,12 +684,82 @@ def _force_warp_markers(clip: Any, sample_beats: float, secs: float) -> None:
         raise RuntimeError(f"last warp marker is {last}, expected beat {sample_beats} / sample {secs}")
 
 
+ONE_SHOT_STRATEGIES = ("unwarped_session", "forced_markers", "move_end_marker")
+
+
+def _must(steps: Dict[str, Any], name: str, fn: Callable[[], Any]) -> Any:
+    """Como _step pero un fallo aborta la estrategia (el error queda en `steps` y en la excepcion)."""
+    ok, value = _step(steps, name, fn)
+    if not ok:
+        raise RuntimeError(f"{name}: {steps[name]['error']}")
+    return value
+
+
+def _clip_diagnostics(clip: Any) -> Dict[str, Any]:
+    """Lectura pura del clip de Session recien creado, para decidir con evidencia real."""
+    diag: Dict[str, Any] = {k: lom_read.get(clip, k) for k in (
+        "warping", "length", "start_marker", "end_marker", "loop_start", "loop_end",
+        "sample_length", "sample_rate")}
+    diag["warp_markers"] = lom_read.safe(lambda: _marker_rows(clip))
+    return diag
+
+
+def _prep_unwarped(clip: Any, secs: float, steps: Dict[str, Any], name: str) -> None:
+    """A: sin warp loop/markers van en SEGUNDOS (LOM docs): el sample entero = [0, secs]."""
+    _must(steps, f"{name}_warping", lambda: setattr(clip, "warping", False))
+    _must(steps, f"{name}_loop", lambda: _set_range(clip, "loop_start", "loop_end", 0.0, secs))
+    _step(steps, f"{name}_markers", lambda: _set_range(clip, "start_marker", "end_marker", 0.0, secs))
+    _step(steps, f"{name}_looping", lambda: setattr(clip, "looping", False))
+
+
+def _finish_warped(clip: Any, sample_beats: float, steps: Dict[str, Any], name: str) -> None:
+    _step(steps, f"{name}_loop", lambda: _set_range(clip, "loop_start", "loop_end", 0.0, sample_beats))
+    _step(steps, f"{name}_markers", lambda: _set_range(clip, "start_marker", "end_marker", 0.0, sample_beats))
+    _step(steps, f"{name}_looping", lambda: setattr(clip, "looping", False))
+
+
+def _prep_forced_markers(clip: Any, sample_beats: float, secs: float, mode: int,
+                         steps: Dict[str, Any], name: str) -> None:
+    """B: primero se extiende el clip (un marker mas alla de end_marker da 'Segment length out of range')."""
+    _step(steps, f"{name}_warping", lambda: setattr(clip, "warping", True))
+    _step(steps, f"{name}_warp_mode", lambda: setattr(clip, "warp_mode", mode))
+    _step(steps, f"{name}_extend_end", lambda: setattr(clip, "end_marker", sample_beats))
+    _step(steps, f"{name}_extend_loop", lambda: setattr(clip, "loop_end", sample_beats))
+    _must(steps, f"{name}_warp_markers", lambda: _force_warp_markers(clip, sample_beats, secs))
+    _finish_warped(clip, sample_beats, steps, name)
+
+
+def _prep_move_end_marker(clip: Any, sample_beats: float, secs: float, mode: int,
+                          steps: Dict[str, Any], name: str) -> None:
+    """C: se ancla un marker en el fin actual del clip (dentro de rango) y se lo mueve a sample_beats."""
+    _step(steps, f"{name}_warping", lambda: setattr(clip, "warping", True))
+    _step(steps, f"{name}_warp_mode", lambda: setattr(clip, "warp_mode", mode))
+
+    def move() -> None:
+        end_beat = float(clip.end_marker)
+        rows = _marker_rows(clip)
+        last = max(rows, key=lambda r: r["beat_time"]) if rows else None
+        if last is None or abs(last["beat_time"] - end_beat) > MARKER_TOL:
+            # Se asume que el fin del clip auto-warpeado cae en el fin del sample
+            _add_warp_marker(clip, end_beat, secs)
+            last = {"beat_time": end_beat}
+        if abs(last["beat_time"] - sample_beats) > MARKER_TOL:
+            clip.move_warp_marker(last["beat_time"], sample_beats - last["beat_time"])
+
+    _must(steps, f"{name}_move_marker", move)
+    _step(steps, f"{name}_extend_end", lambda: setattr(clip, "end_marker", sample_beats))
+    _step(steps, f"{name}_extend_loop", lambda: setattr(clip, "loop_end", sample_beats))
+    _must(steps, f"{name}_warp_markers", lambda: _force_warp_markers(clip, sample_beats, secs))
+    _finish_warped(clip, sample_beats, steps, name)
+
+
 def _place_one_shot(song: Any, track: Any, idx: int, path: str, start: Optional[float],
                     end_beat: Optional[float], total: Optional[float], warp_mode: Optional[int],
                     pitch: Optional[int], gain_db: Optional[float]) -> Dict[str, Any]:
     """
     Una sola copia con el sample entero a `sample_beats` (sin loop). El span de Arrangement lo
-    fija el clip de Session al duplicarlo, asi que se arma ahi con warp markers forzados.
+    fija el clip de Session al duplicarlo; se prueban estrategias en orden hasta que el span
+    duplicado coincida (ONE_SHOT_STRATEGIES). Entre estrategias se borra la copia y el clip scratch.
     """
     method = "session_duplicate_oneshot"
     steps: Dict[str, Any] = {}
@@ -699,23 +769,27 @@ def _place_one_shot(song: Any, track: Any, idx: int, path: str, start: Optional[
     sample_beats: Optional[float] = None
     markers: Any = None
     span: Optional[float] = None
+    strategy: Optional[str] = None
+    strategy_errors: Dict[str, str] = {}
+    diagnostics: Optional[Dict[str, Any]] = None
+    gain_raw: Optional[float] = None
     scratch = _Scratch(song, track)
-
-    def fail(msg: str) -> None:
-        warnings.append(f"one_shot: {msg}")
+    mode = 4 if warp_mode is None else warp_mode
 
     try:
         ok, slot = _step(steps, "copy0_scratch", scratch.acquire)
         ok = ok and _step(steps, "copy0_session_create", lambda: slot.create_audio_clip(path))[0]
         if not ok:
-            fail("could not build the clip in a Session slot; see steps")
+            warnings.append("one_shot: could not build the clip in a Session slot; see steps")
         else:
             clip = slot.clip  # nunca se confia en lo que devuelve create_audio_clip
+            diagnostics = _clip_diagnostics(clip)
             # VERIFICAR EN LIVE: Clip.sample_length (muestras) y sample_rate en un clip de Session
             got, secs = _step(steps, "copy0_sample_length",
                               lambda: float(clip.sample_length) / float(clip.sample_rate))
             if not got or secs <= EPS:
-                fail("sample_length/sample_rate unavailable, cannot compute the exact duration")
+                warnings.append("one_shot: sample_length/sample_rate unavailable, "
+                                "cannot compute the exact duration")
             else:
                 sample_beats = secs * float(song.tempo) / 60.0
                 if end_beat is not None:
@@ -724,24 +798,49 @@ def _place_one_shot(song: Any, track: Any, idx: int, path: str, start: Optional[
                         raise _bad(f"end_beat {end_beat} is before the sample length ({sample_beats} beats)")
                     start = max(start, 0.0)
                 assert start is not None
-                markers = _build_one_shot_clip(clip, sample_beats, secs, warp_mode, pitch, gain_db,
-                                               steps, warnings, gain_info)
-                if markers is not None:
-                    placed = _duplicate_one_shot(track, clip, start, sample_beats, steps, warnings)
+                preps: Dict[str, Callable[[Any], None]] = {
+                    "unwarped_session": lambda c: _prep_unwarped(c, secs, steps, "unwarped_session"),
+                    "forced_markers": lambda c: _prep_forced_markers(
+                        c, sample_beats, secs, mode, steps, "forced_markers"),
+                    "move_end_marker": lambda c: _prep_move_end_marker(
+                        c, sample_beats, secs, mode, steps, "move_end_marker"),
+                }
+                for name in ONE_SHOT_STRATEGIES:
+                    if name != ONE_SHOT_STRATEGIES[0]:  # el primer clip se reusa en A; el resto, uno limpio
+                        if slot.has_clip:
+                            _step(steps, f"{name}_scratch_clear", lambda: slot.delete_clip())
+                        if not _step(steps, f"{name}_session_create", lambda: slot.create_audio_clip(path))[0]:
+                            strategy_errors[name] = steps[f"{name}_session_create"]["error"]
+                            continue
+                    clip = slot.clip
+                    try:
+                        preps[name](clip)
+                        if pitch is not None:
+                            _step(steps, f"{name}_pitch", lambda: setattr(clip, "pitch_coarse", pitch))
+                        if gain_db is not None and gain_info is not None:
+                            gain_raw = _apply_gain(clip, name, gain_db, gain_raw, steps, gain_info, warnings)
+                        placed, err = _duplicate_one_shot(track, clip, start, sample_beats, name, steps)
+                    except Exception as exc:  # noqa: BLE001 - se pasa a la siguiente estrategia
+                        placed, err = None, str(exc)
                     if placed is not None:
+                        strategy = name
                         clips.append(_clip_summary(placed, method))
                         span = clips[0]["span"]
-                        readback = lom_read.safe(lambda: _marker_rows(placed))
-                        markers = readback if isinstance(readback, list) else markers
+                        markers = lom_read.safe(lambda: _marker_rows(placed))
+                        break
+                    strategy_errors[name] = err or "unknown error"
     finally:
         scratch.release(steps)
+    if not clips:  # con exito, los intentos fallidos quedan solo en strategy_errors
+        warnings.extend(f"one_shot[{n}]: {e}" for n, e in strategy_errors.items())
     if span is not None and total is not None and span > total + SPAN_TOL:
         warnings.append(f"one_shot: clip is {span} beats, longer than the requested {total} "
                         "(one_shot placement is start-only, not trimmed)")
     good = (bool(clips) and isinstance(span, float) and sample_beats is not None
             and abs(span - sample_beats) <= ONE_SHOT_TOL)
     out: Dict[str, Any] = {
-        "ok": good, "track": idx, "clips": clips, "method": method,
+        "ok": good, "track": idx, "clips": clips, "method": method, "strategy": strategy,
+        "strategy_errors": strategy_errors, "diagnostics": diagnostics,
         "covered_beats": span if isinstance(span, float) else 0.0, "sample_beats": sample_beats,
         "warp_markers": markers if isinstance(markers, list) else None,
         "warnings": warnings, "steps": steps,
@@ -751,55 +850,31 @@ def _place_one_shot(song: Any, track: Any, idx: int, path: str, start: Optional[
     return out
 
 
-def _build_one_shot_clip(clip: Any, sample_beats: float, secs: float, warp_mode: Optional[int],
-                         pitch: Optional[int], gain_db: Optional[float], steps: Dict[str, Any],
-                         warnings: List[str], gain_info: Optional[Dict[str, Any]]) -> Optional[List[Dict[str, float]]]:
-    """Warp + markers forzados + loop/markers del clip de Session. None si algo clave falla."""
-    mode = 4 if warp_mode is None else warp_mode
-    _step(steps, "copy0_warping", lambda: setattr(clip, "warping", True))
-    _step(steps, "copy0_warp_mode", lambda: setattr(clip, "warp_mode", mode))
-    ok, _ = _step(steps, "copy0_warp_markers", lambda: _force_warp_markers(clip, sample_beats, secs))
-    if not ok:
-        warnings.append(f"one_shot: warp marker forcing failed ({steps['copy0_warp_markers']['error']}); "
-                        "nothing was placed")
-        return None
-    _, rows = _step(steps, "copy0_warp_markers_readback", lambda: _marker_rows(clip))
-    _step(steps, "copy0_loop", lambda: _set_range(clip, "loop_start", "loop_end", 0.0, sample_beats))
-    _step(steps, "copy0_markers", lambda: _set_range(clip, "start_marker", "end_marker", 0.0, sample_beats))
-    _step(steps, "copy0_looping", lambda: setattr(clip, "looping", False))
-    if pitch is not None:
-        _step(steps, "copy0_pitch", lambda: setattr(clip, "pitch_coarse", pitch))
-    if gain_db is not None and gain_info is not None:
-        _apply_gain(clip, "copy0", gain_db, None, steps, gain_info, warnings)
-    return rows if isinstance(rows, list) else []
-
-
-def _duplicate_one_shot(track: Any, clip: Any, start: float, sample_beats: float,
-                        steps: Dict[str, Any], warnings: List[str]) -> Any:
-    """Duplica al Arrangement; si el span no coincide reintenta con looping=True (span = loop)."""
-    placed = None
+def _duplicate_one_shot(track: Any, clip: Any, start: float, sample_beats: float, name: str,
+                        steps: Dict[str, Any]) -> Tuple[Any, Optional[str]]:
+    """
+    Duplica al Arrangement; si el span no coincide reintenta con looping=True (span = loop).
+    Devuelve (clip colocado, None) o (None, error) habiendo borrado cualquier copia mala.
+    """
+    last_span: Optional[float] = None
     for attempt in (0, 1):
         suffix = "" if attempt == 0 else "_retry"
         if attempt:
-            _step(steps, f"copy0_looping{suffix}", lambda: setattr(clip, "looping", True))
-        if not _step(steps, f"copy0_duplicate{suffix}",
+            _step(steps, f"{name}_looping{suffix}", lambda: setattr(clip, "looping", True))
+        if not _step(steps, f"{name}_duplicate{suffix}",
                      lambda: track.duplicate_clip_to_arrangement(clip, start))[0]:
-            warnings.append("one_shot: duplicate_clip_to_arrangement failed; see steps")
-            return None
+            return None, f"duplicate_clip_to_arrangement failed: {steps[f'{name}_duplicate{suffix}']['error']}"
         placed = _find_arrangement_clip(track, start)
         if placed is None:
-            warnings.append(f"one_shot: clip not found in arrangement_clips at beat {start}")
-            return None
-        span = _span(placed)
-        if span is not None and abs(span - sample_beats) <= ONE_SHOT_TOL:
-            return placed
-        if attempt == 0:
-            gone = _step(steps, "copy0_discard", lambda: track.delete_clip(placed))[0]
-            if not gone:
-                break
-    warnings.append(f"one_shot: expected span {sample_beats} beats but arrangement span is "
-                    f"{_span(placed) if placed is not None else None}")
-    return placed
+            return None, f"clip not found in arrangement_clips at beat {start}"
+        last_span = _span(placed)
+        if last_span is not None and abs(last_span - sample_beats) <= ONE_SHOT_TOL:
+            return placed, None
+        gone = _step(steps, f"{name}_discard{suffix}", lambda: track.delete_clip(placed))[0]
+        if not gone:
+            return None, (f"expected span {sample_beats} beats but arrangement span is {last_span} "
+                          "(and the bad copy could not be deleted)")
+    return None, f"expected span {sample_beats} beats but arrangement span is {last_span}"
 
 
 def clip_place_audio(song: Any, params: Dict[str, Any]) -> Dict[str, Any]:
