@@ -301,6 +301,11 @@ def live_bridge_version(client: BridgeClient) -> Dict[str, Any]:
     return client.send_request("bridge.version", {})
 
 
+def live_bridge_stats(client: BridgeClient) -> Dict[str, Any]:
+    """T-024: tiempos del dispatcher por comando (ultimos 10: wait_ms en cola, run_ms ejecutando; cancelled = vencidos sin correr) y timeouts vigentes."""
+    return client.send_request("bridge.stats", {})
+
+
 def live_bridge_reload(
     client: BridgeClient,
     timeout: float = 15.0,

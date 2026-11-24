@@ -23,7 +23,7 @@ import threading
 from typing import Any, Callable, Dict, List, Optional
 
 from . import errors, protocol
-from .dispatcher import UIDispatcher
+from .dispatcher import UIDispatcher, timeout_for
 
 DEFAULT_PORT = 19845
 FALLBACK_PORT_RANGE = range(19845, 19856)  # 19845..19855 inclusive
@@ -187,7 +187,9 @@ class BridgeServer:
         handler = self._handlers.get(cmd)
         if handler is not None:
             # El LOM solo se toca en el hilo principal de Live.
-            return self._dispatcher.run_blocking(lambda: handler(params))
+            return self._dispatcher.run_blocking(
+                lambda: handler(params), timeout=timeout_for(cmd), cmd=cmd
+            )
         raise _CommandError(errors.UNKNOWN_CMD, f"unknown cmd: {cmd}")
 
 

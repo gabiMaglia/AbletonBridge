@@ -45,7 +45,7 @@ HIDDEN_PARAMS = frozenset({"client", "sleep", "clock", "cache_dir"})
 SPIKES_ENV = "NEXO_MCP_SPIKES"
 # Lecturas sin efecto en el set: unicas que se reintentan solas tras una conexion caida.
 IDEMPOTENT_COMMANDS = frozenset({
-    "ping", "state.get", "state.detail", "bridge.version", "return.list",
+    "ping", "state.get", "state.detail", "bridge.version", "bridge.stats", "return.list",
     "locator.status", "automation.status", "meter.status",
 })
 

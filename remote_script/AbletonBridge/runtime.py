@@ -7,7 +7,7 @@ que `bridge.reload` pueda descartar el objeto entero y construir otro con los mo
 """
 from typing import Any, Callable, Dict
 
-from . import automation, handlers, production, spikes, spikes_media, state_detail, version
+from . import automation, dispatcher as dispatcher_mod, handlers, production, spikes, spikes_media, state_detail, version
 from .dispatcher import UIDispatcher
 from .server import BridgeServer
 
@@ -101,6 +101,16 @@ class BridgeRuntime:
             "port": self.server.port,
         }
 
+    def _stats(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "stats": self.dispatcher.stats(),
+            "timeouts": {
+                "read_s": dispatcher_mod.READ_TIMEOUT,
+                "heavy_s": dispatcher_mod.HEAVY_TIMEOUT,
+                "started_cap_s": dispatcher_mod.STARTED_CAP,
+            },
+        }
+
     def _exclusive(self, other: Any, label: str, fn: Callable[..., Dict[str, Any]],
                    params: Dict[str, Any]) -> Dict[str, Any]:
         """Automation y meter comparten el transporte: no pueden correr a la vez."""
@@ -113,6 +123,7 @@ class BridgeRuntime:
         return {
             "bridge.reload": self._reload,
             "bridge.version": self._version,
+            "bridge.stats": self._stats,
             "state.get": lambda params: handlers.get_state(song(), self._live_info, params),
             "state.detail": lambda params: state_detail.get_state_detail(song(), params),
             "song.set": lambda p: production.song_set(song(), p),
