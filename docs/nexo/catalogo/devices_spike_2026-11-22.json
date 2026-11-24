@@ -1,0 +1,1851 @@
+{
+ "live_version": "12.4.16",
+ "fuente": "spike.devices 2026-11-22",
+ "devices": [
+  {
+   "class_name": "Eq8",
+   "name": "EQ Eight",
+   "parameters": [
+    {
+     "name": "Device On",
+     "original_name": "Device On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "Output",
+     "original_name": "Output",
+     "min": -12.0,
+     "max": 12.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "Scale",
+     "original_name": "Scale",
+     "min": -2.0,
+     "max": 2.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    },
+    {
+     "name": "Adaptive Q",
+     "original_name": "Adaptive Q",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "1 Filter On A",
+     "original_name": "1 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "1 Filter Type A",
+     "original_name": "1 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 2.0,
+     "str_for_value": "Low Shelf"
+    },
+    {
+     "name": "1 Frequency A",
+     "original_name": "1 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.1801268309354782,
+     "value": 0.14274713397026062,
+     "str_for_value": "30.0 Hz"
+    },
+    {
+     "name": "1 Gain A",
+     "original_name": "1 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "1 Q A",
+     "original_name": "1 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "1 Filter On B",
+     "original_name": "1 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "1 Filter Type B",
+     "original_name": "1 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 1.0,
+     "str_for_value": "High Pass 12dB"
+    },
+    {
+     "name": "1 Frequency B",
+     "original_name": "1 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.1801268309354782,
+     "value": 0.1801268309354782,
+     "str_for_value": "40.0 Hz"
+    },
+    {
+     "name": "1 Gain B",
+     "original_name": "1 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "1 Q B",
+     "original_name": "1 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "2 Filter On A",
+     "original_name": "2 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "2 Filter Type A",
+     "original_name": "2 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "2 Frequency A",
+     "original_name": "2 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.3892475962638855,
+     "value": 0.3892475962638855,
+     "str_for_value": "200 Hz"
+    },
+    {
+     "name": "2 Gain A",
+     "original_name": "2 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "2 Q A",
+     "original_name": "2 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "2 Filter On B",
+     "original_name": "2 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "2 Filter Type B",
+     "original_name": "2 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 2.0,
+     "str_for_value": "Low Shelf"
+    },
+    {
+     "name": "2 Frequency B",
+     "original_name": "2 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.3892475962638855,
+     "value": 0.3892475962638855,
+     "str_for_value": "200 Hz"
+    },
+    {
+     "name": "2 Gain B",
+     "original_name": "2 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "2 Q B",
+     "original_name": "2 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "3 Filter On A",
+     "original_name": "3 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "3 Filter Type A",
+     "original_name": "3 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "3 Frequency A",
+     "original_name": "3 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.2991841733455658,
+     "value": 0.5983683466911316,
+     "str_for_value": "1000 Hz"
+    },
+    {
+     "name": "3 Gain A",
+     "original_name": "3 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "3 Q A",
+     "original_name": "3 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "3 Filter On B",
+     "original_name": "3 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "3 Filter Type B",
+     "original_name": "3 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "3 Frequency B",
+     "original_name": "3 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.2991841733455658,
+     "value": 0.2991841733455658,
+     "str_for_value": "100.0 Hz"
+    },
+    {
+     "name": "3 Gain B",
+     "original_name": "3 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "3 Q B",
+     "original_name": "3 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "4 Filter On A",
+     "original_name": "4 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "4 Filter Type A",
+     "original_name": "4 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 5.0,
+     "str_for_value": "High Shelf"
+    },
+    {
+     "name": "4 Frequency A",
+     "original_name": "4 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.5083049535751343,
+     "value": 0.8074891567230225,
+     "str_for_value": "5.00 kHz"
+    },
+    {
+     "name": "4 Gain A",
+     "original_name": "4 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "4 Q A",
+     "original_name": "4 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "4 Filter On B",
+     "original_name": "4 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "4 Filter Type B",
+     "original_name": "4 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "4 Frequency B",
+     "original_name": "4 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.5083049535751343,
+     "value": 0.5083049535751343,
+     "str_for_value": "500 Hz"
+    },
+    {
+     "name": "4 Gain B",
+     "original_name": "4 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "4 Q B",
+     "original_name": "4 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "5 Filter On A",
+     "original_name": "5 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "5 Filter Type A",
+     "original_name": "5 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "5 Frequency A",
+     "original_name": "5 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.6884317994117737,
+     "value": 0.2991841733455658,
+     "str_for_value": "100.0 Hz"
+    },
+    {
+     "name": "5 Gain A",
+     "original_name": "5 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "5 Q A",
+     "original_name": "5 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "5 Filter On B",
+     "original_name": "5 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "5 Filter Type B",
+     "original_name": "5 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "5 Frequency B",
+     "original_name": "5 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.6884317994117737,
+     "value": 0.6884317994117737,
+     "str_for_value": "2.00 kHz"
+    },
+    {
+     "name": "5 Gain B",
+     "original_name": "5 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "5 Q B",
+     "original_name": "5 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "6 Filter On A",
+     "original_name": "6 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "6 Filter Type A",
+     "original_name": "6 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "6 Frequency A",
+     "original_name": "6 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.8975525498390198,
+     "value": 0.8975525498390198,
+     "str_for_value": "10.0 kHz"
+    },
+    {
+     "name": "6 Gain A",
+     "original_name": "6 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "6 Q A",
+     "original_name": "6 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "6 Filter On B",
+     "original_name": "6 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "6 Filter Type B",
+     "original_name": "6 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "6 Frequency B",
+     "original_name": "6 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.8975525498390198,
+     "value": 0.8975525498390198,
+     "str_for_value": "10.0 kHz"
+    },
+    {
+     "name": "6 Gain B",
+     "original_name": "6 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "6 Q B",
+     "original_name": "6 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "7 Filter On A",
+     "original_name": "7 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "7 Filter Type A",
+     "original_name": "7 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 3.0,
+     "str_for_value": "Bell"
+    },
+    {
+     "name": "7 Frequency A",
+     "original_name": "7 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.8074891567230225,
+     "value": 0.8074891567230225,
+     "str_for_value": "5.00 kHz"
+    },
+    {
+     "name": "7 Gain A",
+     "original_name": "7 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "7 Q A",
+     "original_name": "7 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "7 Filter On B",
+     "original_name": "7 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "7 Filter Type B",
+     "original_name": "7 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 5.0,
+     "str_for_value": "High Shelf"
+    },
+    {
+     "name": "7 Frequency B",
+     "original_name": "7 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.8074891567230225,
+     "value": 0.8074891567230225,
+     "str_for_value": "5.00 kHz"
+    },
+    {
+     "name": "7 Gain B",
+     "original_name": "7 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "7 Q B",
+     "original_name": "7 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "8 Filter On A",
+     "original_name": "8 Filter On A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "8 Filter Type A",
+     "original_name": "8 Filter Type A",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 6.0,
+     "str_for_value": "Low Pass 12dB"
+    },
+    {
+     "name": "8 Frequency A",
+     "original_name": "8 Frequency A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.9739260673522949,
+     "value": 0.9739260673522949,
+     "str_for_value": "18.0 kHz"
+    },
+    {
+     "name": "8 Gain A",
+     "original_name": "8 Gain A",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "8 Q A",
+     "original_name": "8 Q A",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "8 Filter On B",
+     "original_name": "8 Filter On B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "8 Filter Type B",
+     "original_name": "8 Filter Type B",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "High Pass 48dB",
+      "High Pass 12dB",
+      "Low Shelf",
+      "Bell",
+      "Notch",
+      "High Shelf",
+      "Low Pass 12dB",
+      "Low Pass 48dB"
+     ],
+     "value": 6.0,
+     "str_for_value": "Low Pass 12dB"
+    },
+    {
+     "name": "8 Frequency B",
+     "original_name": "8 Frequency B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.9739260673522949,
+     "value": 0.9739260673522949,
+     "str_for_value": "18.0 kHz"
+    },
+    {
+     "name": "8 Gain B",
+     "original_name": "8 Gain B",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "8 Q B",
+     "original_name": "8 Q B",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.37666621804237366,
+     "value": 0.37666621804237366,
+     "str_for_value": "0.71"
+    }
+   ]
+  },
+  {
+   "class_name": "Saturator",
+   "name": "Saturator",
+   "parameters": [
+    {
+     "name": "Device On",
+     "original_name": "Device On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "Drive",
+     "original_name": "Drive",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.5,
+     "value": 0.5,
+     "str_for_value": "0.0 dB"
+    },
+    {
+     "name": "Pre Dc Filter",
+     "original_name": "Pre Dc Filter",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Type",
+     "original_name": "Type",
+     "min": 0.0,
+     "max": 7.0,
+     "is_quantized": true,
+     "value_items": [
+      "Analog Clip",
+      "Soft Sine",
+      "Bass Shaper",
+      "Medium Curve",
+      "Hard Curve",
+      "Sinoid Fold",
+      "Digital Clip",
+      "Waveshaper"
+     ],
+     "value": 0.0,
+     "str_for_value": "Analog Clip"
+    },
+    {
+     "name": "Color On",
+     "original_name": "Color On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "Color Amt Low",
+     "original_name": "Color Amt Low",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.5,
+     "value": 0.5,
+     "str_for_value": "0.0 %"
+    },
+    {
+     "name": "Color Freq",
+     "original_name": "Color Freq",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.5458248257637024,
+     "value": 0.5458248257637024,
+     "str_for_value": "1.00 kHz"
+    },
+    {
+     "name": "Color Width",
+     "original_name": "Color Width",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.30000001192092896,
+     "value": 0.30000001192092896,
+     "str_for_value": "30 %"
+    },
+    {
+     "name": "Color Amt Hi",
+     "original_name": "Color Amt Hi",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.5,
+     "value": 0.5,
+     "str_for_value": "0.0 %"
+    },
+    {
+     "name": "Post Clip Mode",
+     "original_name": "Post Clip Mode",
+     "min": 0.0,
+     "max": 2.0,
+     "is_quantized": true,
+     "value_items": [
+      "No Clip",
+      "Soft Clip",
+      "Hard Clip"
+     ],
+     "value": 0.0,
+     "str_for_value": "No Clip"
+    },
+    {
+     "name": "Output",
+     "original_name": "Output",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "0.0 dB"
+    },
+    {
+     "name": "Dry/Wet",
+     "original_name": "Dry/Wet",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    },
+    {
+     "name": "Threshold",
+     "original_name": "Threshold",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "-50 dB"
+    },
+    {
+     "name": "WS Drive",
+     "original_name": "WS Drive",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    },
+    {
+     "name": "WS Linearity",
+     "original_name": "WS Linearity",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.5,
+     "value": 0.5,
+     "str_for_value": "50 %"
+    },
+    {
+     "name": "WS Curve",
+     "original_name": "WS Curve",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.05000000074505806,
+     "str_for_value": "5.0 %"
+    },
+    {
+     "name": "WS Damp",
+     "original_name": "WS Damp",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.0 %"
+    },
+    {
+     "name": "WS Period",
+     "original_name": "WS Period",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.0 %"
+    },
+    {
+     "name": "WS Depth",
+     "original_name": "WS Depth",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.0 %"
+    }
+   ]
+  },
+  {
+   "class_name": "Compressor2",
+   "name": "Compressor",
+   "parameters": [
+    {
+     "name": "Device On",
+     "original_name": "Device On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "Threshold",
+     "original_name": "Threshold",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.8500000238418579,
+     "value": 0.8500000238418579,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "Ratio",
+     "original_name": "Ratio",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.75,
+     "value": 0.75,
+     "str_for_value": "4.00 : 1"
+    },
+    {
+     "name": "Expansion Ratio",
+     "original_name": "Expansion Ratio",
+     "min": 1.0,
+     "max": 2.0,
+     "is_quantized": false,
+     "default_value": 1.149999976158142,
+     "value": 1.149999976158142,
+     "str_for_value": "1 : 1.15"
+    },
+    {
+     "name": "Attack",
+     "original_name": "Attack",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.4000000059604645,
+     "value": 0.4000000059604645,
+     "str_for_value": "1.00 ms"
+    },
+    {
+     "name": "Release",
+     "original_name": "Release",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.1569925993680954,
+     "value": 0.1569925993680954,
+     "str_for_value": "30.0 ms"
+    },
+    {
+     "name": "Auto Release On/Off",
+     "original_name": "Auto Release On/Off",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Output",
+     "original_name": "Output",
+     "min": -36.0,
+     "max": 36.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "Makeup",
+     "original_name": "Makeup",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Dry/Wet",
+     "original_name": "Dry/Wet",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    },
+    {
+     "name": "Model",
+     "original_name": "Model",
+     "min": 0.0,
+     "max": 2.0,
+     "is_quantized": true,
+     "value_items": [
+      "Peak",
+      "RMS",
+      "Expand"
+     ],
+     "value": 1.0,
+     "str_for_value": "RMS"
+    },
+    {
+     "name": "Env Mode",
+     "original_name": "Env Mode",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Lin",
+      "Log"
+     ],
+     "value": 1.0,
+     "str_for_value": "Log"
+    },
+    {
+     "name": "Knee",
+     "original_name": "Knee",
+     "min": 0.0,
+     "max": 18.0,
+     "is_quantized": false,
+     "default_value": 6.0,
+     "value": 6.0,
+     "str_for_value": "6.0 dB"
+    },
+    {
+     "name": "LookAhead",
+     "original_name": "LookAhead",
+     "min": 0.0,
+     "max": 2.0,
+     "is_quantized": true,
+     "value_items": [
+      "0 ms",
+      "1 ms",
+      "10 ms"
+     ],
+     "value": 0.0,
+     "str_for_value": "0 ms"
+    },
+    {
+     "name": "S/C Listen",
+     "original_name": "S/C Listen",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "S/C EQ On",
+     "original_name": "S/C EQ On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "S/C EQ Type",
+     "original_name": "S/C EQ Type",
+     "min": 0.0,
+     "max": 5.0,
+     "is_quantized": true,
+     "value_items": [
+      "Low Shelf",
+      "Bell",
+      "High Shelf",
+      "Low pass",
+      "Peak",
+      "High pass"
+     ],
+     "value": 5.0,
+     "str_for_value": "High pass"
+    },
+    {
+     "name": "S/C EQ Freq",
+     "original_name": "S/C EQ Freq",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.15782640874385834,
+     "value": 0.15782640874385834,
+     "str_for_value": "80.0 Hz"
+    },
+    {
+     "name": "S/C EQ Q",
+     "original_name": "S/C EQ Q",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.40856707096099854,
+     "value": 0.40856707096099854,
+     "str_for_value": "0.71"
+    },
+    {
+     "name": "S/C EQ Gain",
+     "original_name": "S/C EQ Gain",
+     "min": -15.0,
+     "max": 15.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "S/C On",
+     "original_name": "S/C On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "S/C Gain",
+     "original_name": "S/C Gain",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.4000000059604645,
+     "value": 0.4000000059604645,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "S/C Mix",
+     "original_name": "S/C Mix",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    }
+   ]
+  },
+  {
+   "class_name": "DrumBuss",
+   "name": "Drum Buss",
+   "parameters": [
+    {
+     "name": "Device On",
+     "original_name": "Device On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "Compressor On",
+     "original_name": "Compressor On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Drive",
+     "original_name": "Drive",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.20000000298023224,
+     "value": 0.20000000298023224,
+     "str_for_value": "20 %"
+    },
+    {
+     "name": "Drive Type",
+     "original_name": "Drive Type",
+     "min": 0.0,
+     "max": 2.0,
+     "is_quantized": true,
+     "value_items": [
+      "Soft",
+      "Medium",
+      "Hard"
+     ],
+     "value": 0.0,
+     "str_for_value": "Soft"
+    },
+    {
+     "name": "Crunch",
+     "original_name": "Crunch",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.0 %"
+    },
+    {
+     "name": "Damping Freq",
+     "original_name": "Damping Freq",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.7894946932792664,
+     "value": 0.7894946932792664,
+     "str_for_value": "9.20 kHz"
+    },
+    {
+     "name": "Transients",
+     "original_name": "Transients",
+     "min": -1.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00"
+    },
+    {
+     "name": "Boom Freq",
+     "original_name": "Boom Freq",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.464973509311676,
+     "value": 0.464973509311676,
+     "str_for_value": "50.0 Hz"
+    },
+    {
+     "name": "Boom Amt",
+     "original_name": "Boom Amt",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.0 %"
+    },
+    {
+     "name": "Boom Decay",
+     "original_name": "Boom Decay",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    },
+    {
+     "name": "Boom Audition",
+     "original_name": "Boom Audition",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Trim",
+     "original_name": "Trim",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "Output",
+     "original_name": "Output",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.9249424338340759,
+     "value": 0.9249424338340759,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "Dry/Wet",
+     "original_name": "Dry/Wet",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    }
+   ]
+  },
+  {
+   "class_name": "StereoGain",
+   "name": "Utility",
+   "parameters": [
+    {
+     "name": "Device On",
+     "original_name": "Device On",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 1.0,
+     "str_for_value": "On"
+    },
+    {
+     "name": "Left Inv",
+     "original_name": "Left Inv",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Right Inv",
+     "original_name": "Right Inv",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Channel Mode",
+     "original_name": "Channel Mode",
+     "min": 0.0,
+     "max": 3.0,
+     "is_quantized": true,
+     "value_items": [
+      "Left",
+      "Stereo",
+      "Right",
+      "Swap"
+     ],
+     "value": 1.0,
+     "str_for_value": "Stereo"
+    },
+    {
+     "name": "Stereo Width",
+     "original_name": "Stereo Width",
+     "min": 0.0,
+     "max": 2.0,
+     "is_quantized": false,
+     "default_value": 1.0,
+     "value": 1.0,
+     "str_for_value": "100 %"
+    },
+    {
+     "name": "Mono",
+     "original_name": "Mono",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Bass Mono",
+     "original_name": "Bass Mono",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "Bass Freq",
+     "original_name": "Bass Freq",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.3802112340927124,
+     "value": 0.3802112340927124,
+     "str_for_value": "120 Hz"
+    },
+    {
+     "name": "Balance",
+     "original_name": "Balance",
+     "min": -1.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "C"
+    },
+    {
+     "name": "Output",
+     "original_name": "Output",
+     "min": -1.0,
+     "max": 1.0,
+     "is_quantized": false,
+     "default_value": 0.0,
+     "value": 0.0,
+     "str_for_value": "0.00 dB"
+    },
+    {
+     "name": "Mute",
+     "original_name": "Mute",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    },
+    {
+     "name": "DC Filter",
+     "original_name": "DC Filter",
+     "min": 0.0,
+     "max": 1.0,
+     "is_quantized": true,
+     "value_items": [
+      "Off",
+      "On"
+     ],
+     "value": 0.0,
+     "str_for_value": "Off"
+    }
+   ]
+  }
+ ]
+}
