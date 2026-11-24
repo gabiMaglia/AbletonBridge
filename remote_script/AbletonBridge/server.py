@@ -127,7 +127,13 @@ class BridgeServer:
                 continue
             except OSError:
                 break
-            self._handle_connection(conn)
+            try:
+                self._handle_connection(conn)
+            except Exception:  # noqa: BLE001
+                # Un cliente roto (10053/10054 u otro error) no puede matar el
+                # loop: si el thread muere, el puerto sigue LISTENING pero nadie
+                # atiende. Sin log: en Live sys.stderr (live_stderr) no tiene flush.
+                pass
 
     def _handle_connection(self, conn: socket.socket) -> None:
         conn.settimeout(0.5)

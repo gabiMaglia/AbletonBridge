@@ -4,6 +4,13 @@
 > el Orquestador mueve las más viejas a ~/.nerv/archive/abletonBridge-handoffs-[fecha].md
 > OJO: las entradas del 2026-11-22 quedaron ABAJO (violando la regla). Se dejan como están; desde 2026-11-24 vuelven arriba.
 
+### 2026-11-24 nerv-desktop->nerv-orquestador T-022 (retorno)
+- estado: En revision QA. `_serve_forever` envuelve `_handle_connection` en try/except: un OSError (10053/10054) u otra excepcion de UNA conexion ya no mata el thread de accept. Sin log (live_stderr sin flush); stdlib pura, protocolo intacto.
+- archivos: remote_script/AbletonBridge/server.py; tests/test_remote_script/test_server.py (+4 tests con sockets falsos: sendall 10053, recv 10054, no-OSError, after_response intacto).
+- TDD: 3 de los 4 tests en rojo antes del fix (el de after_response es guarda de regresion). Suite completa 543 passed (antes 539).
+- riesgos: error por conexion se traga en silencio (sin diagnostico). Sin validar en Live real; el orquestador despliega a la User Library.
+- como probar: `.venv\Scripts\python -m pytest` (Windows); en Live, abortar un cliente a mitad de respuesta y verificar que live_ping sigue respondiendo.
+
 ### 2026-11-24 nerv-orquestador T-018 (saneamiento de engram)
 - Backlog reconciliado con el código: alta de T-002b..T-017 (Sprint 2, todos "En revisión QA", columna Live ✅/⚠️/❌), T-003..T-007 originales → "Reemplazado" (filas `-orig`), Sprint 3 nuevo (T-018..T-021), épicas E-001/003/004/005 a "En progreso", DT-01..DT-05.
 - Requirements: Q-001 obsoleta (D-10), Q-003 resuelta (D-01+D-16), Q-005 parcial (perfil YAML), Q-006 resuelta (D-14); RN-003 obsoleta. Architecture: stack actualizado, ADR-002 aceptado por D-14 (cuerpo pendiente).
