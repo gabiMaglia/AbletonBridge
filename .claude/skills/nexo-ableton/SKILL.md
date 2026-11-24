@@ -54,7 +54,15 @@ Antes de tocar el set: `live_ping`, `live_get_state` (liviano) y, si hace falta,
 - **Reload vs reinicio**: `live_bridge_reload` recarga modulos sin reiniciar Live, pero un
   modulo **nuevo** que el reloader en memoria no conoce exige reiniciar Live una vez.
   `live_bridge_version` dice que cargo. Si Live reinicia, el servidor MCP reconecta solo en la
-  siguiente llamada.
+  siguiente llamada. **Reiniciar la Superficie de Control** (Preferencias: Ninguna -> AbletonBridge)
+  o abrir un set nuevo re-instancia la surface pero **NO re-importa modulos**: codigo desplegado
+  nuevo solo entra con `live_bridge_reload` (o reiniciando Live).
+- **Live lento = motor de audio trabado**: si `live_bridge_stats` muestra `wait_ms`/`run_ms` de
+  segundos, o escrituras simples tardan, buscar `Audio queue timeout` en Log.txt de Live
+  (`%APPDATA%\Ableton\Live 12.4.16\Preferences\Log.txt`). Si aparece: pedirle a Gabriel que
+  reinicie Live. No es un bug del bridge (T-019, 2026-11-24).
+- **Lecturas en el mismo tick mienten**: `loop_on` (y `current_song_time`) se aplican en el tick
+  siguiente; la respuesta inmediata de `song.set` puede mostrar el valor viejo. Releer si importa.
 - **Timeouts y reintentos (T-023)**: lecturas 5 s, escrituras pesadas 30 s. Si una escritura da
   `BRIDGE_TIMEOUT`/`BRIDGE_DISCONNECTED` con "pudo haberse ejecutado", Live probablemente la aplico:
   **releer el estado antes de reintentar** (track.create duplicaria). Las lecturas se reintentan solas 1 vez.
