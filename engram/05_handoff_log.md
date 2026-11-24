@@ -2,6 +2,12 @@
 
 > Entradas nuevas ARRIBA. Máx. 6 líneas por entrada. Al superar 30 entradas,
 > el Orquestador mueve las más viejas a ~/.nerv/archive/abletonBridge-handoffs-[fecha].md
+> OJO: las entradas del 2026-11-22 quedaron ABAJO (violando la regla). Se dejan como están; desde 2026-11-24 vuelven arriba.
+
+### 2026-11-24 nerv-orquestador T-018 (saneamiento de engram)
+- Backlog reconciliado con el código: alta de T-002b..T-017 (Sprint 2, todos "En revisión QA", columna Live ✅/⚠️/❌), T-003..T-007 originales → "Reemplazado" (filas `-orig`), Sprint 3 nuevo (T-018..T-021), épicas E-001/003/004/005 a "En progreso", DT-01..DT-05.
+- Requirements: Q-001 obsoleta (D-10), Q-003 resuelta (D-01+D-16), Q-005 parcial (perfil YAML), Q-006 resuelta (D-14); RN-003 obsoleta. Architecture: stack actualizado, ADR-002 aceptado por D-14 (cuerpo pendiente).
+- Hallazgo: play/stop no tienen tool pública (DT-04). No existe rama `main` local ni remota: todo vive en feature/T-002-scaffold.
 
 ### 2026-06-22 nerv-desktop→nerv-orquestador T-002 (retorno)
 - estado: En revisión QA. Scaffold + handshake `ping` + tool `live_get_state` E2E (vs RS mockeado y BridgeServer real). 39 tests pytest GREEN, TDD respetado. 3 commits en feature/T-002-scaffold, sin push.
