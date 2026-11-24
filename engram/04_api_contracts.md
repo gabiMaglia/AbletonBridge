@@ -58,6 +58,7 @@ Un mensaje = una línea = un objeto JSON. Sin saltos de línea internos (JSON co
   pueden volver fuera de orden. El RS SIEMPRE devuelve el `id` recibido.
 - **Timeout de request (MCP):** 5 s por defecto por comando. Al vencer → el MCP resuelve
   la tool con error `BRIDGE_TIMEOUT` y descarta la entrada del mapa.
+- **Timeout del RS (T-024):** el dispatcher espera la cola `READ_TIMEOUT=4 s` (lecturas) o `HEAVY_TIMEOUT=25 s` (los comandos de `HEAVY_COMMANDS`, mismo set que el cliente), SIEMPRE menor que el del MCP (5 s / 30 s) para que el RS conteste antes (test lo verifica). Un job que vence sin haber empezado se cancela; uno que ya empezó se espera (tope 120 s) y devuelve su resultado real.
 - **Handshake/keepalive:** comando `ping` → `{ "ok": true, "result": { "pong": true,
   "live_version": "12.0.5", "api_level": 12 } }`. El MCP hace `ping` al conectar para
   resolver la versión de Live y elegir adaptadores (ver §C).
@@ -78,6 +79,7 @@ Un mensaje = una línea = un objeto JSON. Sin saltos de línea internos (JSON co
 | `SLOT_OCCUPIED` | RS | Ya existe un clip en el slot al crear. |
 | `NOT_MIDI_TRACK` | RS | La operación requiere un track MIDI. |
 | `LOM_ERROR` | RS | Excepción del Live API al ejecutar (mensaje en `message`). |
+| `DISPATCH_TIMEOUT` | RS | (T-024) Live no atendió la cola a tiempo. Mensaje `no se ejecuto...`: el job se CANCELÓ y no correrá nunca. Mensaje `sigue ejecutandose...`: el job empezó y superó el tope duro (120 s); relee el estado antes de reintentar. |
 
 ---
 
@@ -381,6 +383,9 @@ Respuesta suma: `strategy` (la que funciono, o `null`), `strategy_errors` `{estr
 Cambio de comportamiento: si gana A el clip queda SIN warp (se reproduce a velocidad original; no sigue cambios de tempo).
 
 VERIFICAR EN LIVE (T-003d): (1) `diagnostics` de un riser: `warping`, `length`/`end_marker`/`loop_end` (32?), `warp_markers` (auto: `[(0,0),(0.03125,0.0146)]`), `sample_length`/`sample_rate`; (2) A: tras `warping=False` en Session, en que unidad quedan `loop_*`/`*_marker` (segundos vs beats) y si `duplicate_clip_to_arrangement` da span = `secs*tempo/60`; (3) B: si Live acepta `end_marker`/`loop_end` > natural en un clip warpeado (steps `forced_markers_extend_*`) y si luego `WarpMarker(...)` en `sample_beats` ya no da "Segment length out of range"; (4) C: firma real `move_warp_marker(beat_time, beat_time_distance)` y si mover el marker del final arrastra `end_marker`/`loop_end` (en el fake si); (5) cual `strategy` gano y si suena el riser completo.
+
+### `bridge.stats` (T-024, insumo DT-09)
+- `live_bridge_stats`: `{}` -> `{stats: {<cmd>: {count, cancelled, last: [{wait_ms, run_ms}] (ultimos 10)}}, timeouts: {read_s, heavy_s, started_cap_s}}`. `wait_ms` = encolado -> inicio (espera del tick de Live), `run_ms` = ejecucion. `cancelled` = vencidos sin correr. Solo lectura, idempotente; en memoria (se pierde con `bridge.reload`).
 
 ### `bridge.reload` / `bridge.version` (T-011): recargar el Remote Script sin reiniciar Live
 - `bridge.version` (`live_bridge_version`): `{}` -> `{version (str, version.VERSION), loaded_at (float, time.time() al cargar version.py; cambia en cada reload), reload_count (int, recargas OK desde que Live cargo la surface), port}`.

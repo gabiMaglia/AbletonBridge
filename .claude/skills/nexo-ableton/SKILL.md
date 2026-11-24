@@ -58,6 +58,7 @@ Antes de tocar el set: `live_ping`, `live_get_state` (liviano) y, si hace falta,
 - **Timeouts y reintentos (T-023)**: lecturas 5 s, escrituras pesadas 30 s. Si una escritura da
   `BRIDGE_TIMEOUT`/`BRIDGE_DISCONNECTED` con "pudo haberse ejecutado", Live probablemente la aplico:
   **releer el estado antes de reintentar** (track.create duplicaria). Las lecturas se reintentan solas 1 vez.
+- **`DISPATCH_TIMEOUT` (T-024)**: "no se ejecuto" = Live no atendio la cola y el comando se cancelo (reintentar es seguro); "sigue ejecutandose" = corre aun, releer antes de reintentar. `live_bridge_stats` da tiempos en cola/ejecucion.
 - **Unidades de display**: tiempos en **ms** (8 s = 8000), frecuencias en Hz (kHz se normaliza),
   niveles en dB. Preferir `display` sobre `value` crudo (0..1). `within_tolerance` confirma.
 - **Nombres de API != interfaz**: Utility `Output`, Compressor=`Compressor2`, Utility=`StereoGain`,

@@ -4,6 +4,13 @@
 > el Orquestador mueve las más viejas a ~/.nerv/archive/abletonBridge-handoffs-[fecha].md
 > OJO: las entradas del 2026-11-22 quedaron ABAJO (violando la regla). Se dejan como están; desde 2026-11-24 vuelven arriba.
 
+### 2026-11-24 nerv-desktop->nerv-orquestador T-024 (retorno)
+- estado: En revision QA. `run_blocking` ahora cancela el job que vence SIN empezar (error `DISPATCH_TIMEOUT` "no se ejecuto: Live no atendio la cola en N s", nunca corre despues) y espera al que YA empezo (tope duro 120 s). Timeout por comando: lecturas 4 s, pesadas 25 s (< 5 s / 30 s del cliente; test de invariante importa ambos mapas).
+- archivos: remote_script/AbletonBridge/{dispatcher,errors,server,runtime}.py; mcp_server/.../{server,stdio_server}.py (tool `live_bridge_stats`, idempotente); tests/test_remote_script/test_dispatch_timeouts.py (+14), test_dispatcher.py, test_bridge_tools.py; contrato 04 + SKILL.md.
+- instrumentacion DT-09: nuevo cmd `bridge.stats` -> por cmd {count, cancelled, ultimos 10 {wait_ms, run_ms}} + timeouts vigentes.
+- TDD: 14 tests rojos antes; suite 576 passed (antes 562). Sin modulo nuevo: `bridge.reload` alcanza (surface/reloader intactos), NO hace falta reiniciar Live; si el reload esta ya cargado con codigo previo, el primer reload tras desplegar basta. Reiniciar el proceso MCP para ver la tool nueva.
+- riesgos: `TimeoutError` ya no sale de run_blocking (ahora CommandError; unico test viejo ajustado). Stats en memoria (se pierden en reload). Sin validar en Live real; el orquestador despliega.
+
 ### 2026-11-24 nerv-ai->nerv-orquestador T-023 (retorno)
 - estado: En revision QA. Errores del bridge llegan como `ToolError` ("CODE: msg", tambien excepciones inesperadas con tipo); timeout por comando (5 s lecturas, 30 s escrituras pesadas, env NEXO_MCP_TIMEOUT / NEXO_MCP_HEAVY_TIMEOUT); reintento unico solo para lecturas tras conexion caida.
 - archivos: mcp_server/abletonbridge_mcp/{client,stdio_server}.py; tests/test_mcp_server/{test_timeouts,test_stdio_server}.py; SKILL.md (Trampas). Protocolo y Remote Script intactos.
