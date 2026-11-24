@@ -13,7 +13,13 @@ from mcp_server.abletonbridge_mcp import stdio_server as st
 from mcp_server.abletonbridge_mcp.client import (
     BridgeCommandError,
     BridgeDisconnectedError,
+    BridgeTimeoutError,
 )
+
+try:
+    from mcp.server.mcpserver.exceptions import ToolError
+except ImportError:  # mcp 1.x
+    from mcp.server.fastmcp.exceptions import ToolError
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -103,6 +109,12 @@ def test_every_tool_has_a_description(monkeypatch) -> None:
 # --- runtime: conexion lazy, errores, tamano ---
 
 
+def _disconnected(after_send=True):
+    exc = BridgeDisconnectedError("connection closed by remote script")
+    exc.after_send = after_send
+    return exc
+
+
 def test_client_is_lazy_and_shared() -> None:
     fake = FakeClient()
     rt = st.BridgeRuntime(client_factory=lambda: fake)
@@ -126,8 +138,8 @@ def test_reconnects_on_next_call_after_disconnect() -> None:
     tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
     tools["live_ping"]()
     fake.fail_next = BridgeDisconnectedError("connection closed by remote script")
-    with pytest.raises(RuntimeError, match="BRIDGE_DISCONNECTED"):
-        tools["live_ping"]()
+    with pytest.raises(ToolError, match="BRIDGE_DISCONNECTED"):
+        tools["live_song_set"](tempo=120.0)  # escritura: no se reintenta sola
     assert fake.connected is False
     tools["live_ping"]()
     assert fake.connect_calls == 2
@@ -137,18 +149,18 @@ def test_command_error_keeps_code_in_message() -> None:
     fake = FakeClient()
     tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
     fake.fail_next = BridgeCommandError("VOLUME_AUTOMATION_FORBIDDEN", "usa Utility Output")
-    with pytest.raises(RuntimeError, match="VOLUME_AUTOMATION_FORBIDDEN.*Utility Output"):
+    with pytest.raises(ToolError, match="VOLUME_AUTOMATION_FORBIDDEN.*Utility Output"):
         tools["live_ping"]()
     assert fake.connected is True  # un error de dominio no tira la conexion
 
 
-def test_connect_failure_is_reported_as_runtime_error() -> None:
+def test_connect_failure_is_reported_as_tool_error() -> None:
     class Dead(FakeClient):
         def connect_with_retry(self, max_attempts=3):
             raise BridgeDisconnectedError("could not connect to 127.0.0.1:19845 after 3 attempts")
 
     tools = st.build_tools(st.BridgeRuntime(client_factory=Dead))
-    with pytest.raises(RuntimeError, match="BRIDGE_DISCONNECTED"):
+    with pytest.raises(ToolError, match="BRIDGE_DISCONNECTED"):
         tools["live_ping"]()
 
 
@@ -216,3 +228,113 @@ def test_stdio_process_handshake_lists_tools_and_exits_on_eof() -> None:
             proc.kill()
         proc.stdout.close()
         proc.stderr.close()
+
+
+# --- T-023: errores visibles, reintento de lecturas, aviso de escrituras ---
+
+
+def test_every_bridge_error_is_a_tool_error_with_code() -> None:
+    fake = FakeClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    fake.fail_next = BridgeCommandError("FILE_NOT_FOUND", "no existe C:/x.wav")
+    with pytest.raises(ToolError, match="^FILE_NOT_FOUND: no existe C:/x.wav$"):
+        tools["live_ping"]()
+    fake.fail_next = BridgeTimeoutError("timed out")
+    with pytest.raises(ToolError, match="BRIDGE_TIMEOUT"):
+        tools["live_ping"]()
+
+
+def test_unexpected_exception_is_not_masked() -> None:
+    fake = FakeClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    fake.fail_next = KeyError("tracks")
+    with pytest.raises(ToolError, match="KeyError.*tracks"):
+        tools["live_ping"]()
+    with pytest.raises(ToolError, match="ValueError.*need 0 <= start_beat"):
+        tools["live_automation_record"](start_beat=8, end_beat=4, lanes=[{}])
+
+
+def test_read_is_retried_once_after_stale_connection() -> None:
+    fake = FakeClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    tools["live_ping"]()
+    fake.fail_next = _disconnected()
+    assert tools["live_get_state"]() == {"ok": True}
+    assert fake.connect_calls == 2
+    assert [c for c, _ in fake.sent] == ["ping", "state.get"]
+
+
+def test_read_retry_is_only_one() -> None:
+    fake = FakeClient()
+    calls = []
+
+    def always_dead(cmd, params):
+        calls.append(cmd)
+        raise _disconnected()
+
+    fake.send_request = always_dead
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    with pytest.raises(ToolError, match="BRIDGE_DISCONNECTED"):
+        tools["live_return_list"]()
+    assert calls == ["return.list", "return.list"]
+    assert fake.connected is False
+
+
+def test_retry_allowlist_is_reads_only() -> None:
+    assert {"ping", "state.get", "state.detail", "bridge.version", "return.list",
+            "locator.status", "automation.status", "meter.status"} <= st.IDEMPOTENT_COMMANDS
+    for write in ("song.set", "track.create", "clip.place_audio", "locator.set_many", "automation.record"):
+        assert write not in st.IDEMPOTENT_COMMANDS
+
+
+def test_write_is_never_retried_and_warns_it_may_have_executed() -> None:
+    fake = FakeClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    tools["live_ping"]()
+    fake.fail_next = _disconnected(after_send=True)
+    with pytest.raises(ToolError, match="track.create.*pudo haberse ejecutado.*relee"):
+        tools["live_track_create"](kind="audio", name="x")
+    assert fake.sent == [("ping", {})]  # no se reintento
+
+
+def test_write_failed_before_sending_says_so() -> None:
+    fake = FakeClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    tools["live_ping"]()
+    fake.fail_next = _disconnected(after_send=False)
+    with pytest.raises(ToolError, match="no se envi") as ei:
+        tools["live_track_create"](kind="audio", name="x")
+    assert "pudo haberse ejecutado" not in str(ei.value)
+
+
+def test_write_timeout_warns_state_must_be_reread() -> None:
+    fake = FakeClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    tools["live_ping"]()
+    fake.fail_next = BridgeTimeoutError("timed out waiting for response to 'song.set'")
+    with pytest.raises(ToolError, match="BRIDGE_TIMEOUT.*song.set.*pudo haberse ejecutado.*relee"):
+        tools["live_song_set"](tempo=128.0)
+    assert fake.connected is True  # la conexion sigue: la respuesta tardia se descarta por id
+
+
+def test_read_timeout_has_no_executed_warning() -> None:
+    fake = FakeClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    fake.fail_next = BridgeTimeoutError("timed out waiting for response to 'ping'")
+    with pytest.raises(ToolError) as ei:
+        tools["live_ping"]()
+    assert "pudo haberse ejecutado" not in str(ei.value)
+
+
+def test_ping_goes_through_the_tracker_and_is_retried() -> None:
+    # client.ping() del cliente real llama a su propio send_request: debe pasar por el tracker
+    class RealishClient(FakeClient):
+        def ping(self):
+            return super().send_request("ping", {})
+
+    fake = RealishClient()
+    tools = st.build_tools(st.BridgeRuntime(client_factory=lambda: fake))
+    tools["live_ping"]()
+    fake.fail_next = _disconnected()
+    assert tools["live_ping"]() == {"ok": True}
+    assert fake.connect_calls == 2
