@@ -55,6 +55,9 @@ Antes de tocar el set: `live_ping`, `live_get_state` (liviano) y, si hace falta,
   modulo **nuevo** que el reloader en memoria no conoce exige reiniciar Live una vez.
   `live_bridge_version` dice que cargo. Si Live reinicia, el servidor MCP reconecta solo en la
   siguiente llamada.
+- **Timeouts y reintentos (T-023)**: lecturas 5 s, escrituras pesadas 30 s. Si una escritura da
+  `BRIDGE_TIMEOUT`/`BRIDGE_DISCONNECTED` con "pudo haberse ejecutado", Live probablemente la aplico:
+  **releer el estado antes de reintentar** (track.create duplicaria). Las lecturas se reintentan solas 1 vez.
 - **Unidades de display**: tiempos en **ms** (8 s = 8000), frecuencias en Hz (kHz se normaliza),
   niveles en dB. Preferir `display` sobre `value` crudo (0..1). `within_tolerance` confirma.
 - **Nombres de API != interfaz**: Utility `Output`, Compressor=`Compressor2`, Utility=`StereoGain`,

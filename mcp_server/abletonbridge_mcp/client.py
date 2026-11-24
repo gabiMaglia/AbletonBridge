@@ -6,10 +6,10 @@ Contrato (engram/04_api_contracts.md SS A):
 - Correlacion por `id` (UUID v4) -- usamos un mapa id->resultado simple ya
   que esta implementacion es sincronica (una request en vuelo a la vez es
   suficiente para T-002; T-003+ puede paralelizar si el contrato lo permite).
-- Timeout de request: 5s por defecto.
+- Timeout de request: 5s por defecto; 30s para escrituras pesadas (ver HEAVY_COMMANDS, T-023).
 - Reconexion con backoff: 1s, 2s, 4s (max 4s) -- configurable para tests.
 """
-import json
+import os
 import socket
 import time
 import uuid
@@ -18,6 +18,32 @@ from typing import Any, Dict, Optional, Sequence
 from . import protocol
 
 DEFAULT_TIMEOUT = 5.0
+HEAVY_TIMEOUT = 30.0
+TIMEOUT_ENV = "NEXO_MCP_TIMEOUT"
+HEAVY_TIMEOUT_ENV = "NEXO_MCP_HEAVY_TIMEOUT"
+
+# Escrituras que en Live tardan segundos (crear/duplicar clips en Session, cargar devices, cambiar
+# loop). Medido en Live 12.4.16: song.set con loop ~3 s c/u y place_audio parcial > 5 s, aplicados
+# igual. 30 s = ~6x lo medido. Los comandos asincronos (automation.record, meter.capture,
+# locator.set_many, bridge.reload) responden al toque y se sondean aparte: no van aca.
+HEAVY_COMMANDS = frozenset({
+    "song.set", "clip.place_audio", "clip.create_midi", "clip.delete_range", "simpler.load",
+    "track.create", "return.create", "device.insert", "return.device_insert", "master.device_insert",
+})
+
+
+def _env_seconds(name: str, default: float) -> float:
+    try:
+        value = float(os.environ.get(name, ""))
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def timeout_for(cmd: str) -> float:
+    if cmd in HEAVY_COMMANDS:
+        return _env_seconds(HEAVY_TIMEOUT_ENV, HEAVY_TIMEOUT)
+    return _env_seconds(TIMEOUT_ENV, DEFAULT_TIMEOUT)
 DEFAULT_BACKOFF_SCHEDULE = (1.0, 2.0, 4.0)
 
 
@@ -31,6 +57,8 @@ class BridgeTimeoutError(BridgeError):
 
 class BridgeDisconnectedError(BridgeError):
     code = "BRIDGE_DISCONNECTED"
+    # False solo si el request no llego a salir; ante la duda es True (puede haberse ejecutado).
+    after_send = True
 
 
 class BridgeCommandError(BridgeError):
@@ -47,7 +75,7 @@ class BridgeClient:
         self,
         host: str = "127.0.0.1",
         port: int = 19845,
-        timeout: float = DEFAULT_TIMEOUT,
+        timeout: Optional[float] = None,
         backoff_schedule: Sequence[float] = DEFAULT_BACKOFF_SCHEDULE,
     ) -> None:
         self._host = host
@@ -59,7 +87,7 @@ class BridgeClient:
 
     def connect(self) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(self._timeout)
+        sock.settimeout(self._timeout if self._timeout is not None else timeout_for("ping"))
         sock.connect((self._host, self._port))
         self._sock = sock
         self._recv_buf = b""
@@ -94,7 +122,9 @@ class BridgeClient:
         Lanza BridgeDisconnectedError, BridgeTimeoutError o BridgeCommandError.
         """
         if self._sock is None:
-            raise BridgeDisconnectedError("not connected to remote script")
+            exc = BridgeDisconnectedError("not connected to remote script")
+            exc.after_send = False
+            raise exc
 
         request_id = str(uuid.uuid4())
         line = protocol.encode_request(request_id, cmd, params)
@@ -102,9 +132,12 @@ class BridgeClient:
         try:
             self._sock.sendall(line.encode("utf-8"))
         except OSError as exc:
-            raise BridgeDisconnectedError(str(exc)) from exc
+            err = BridgeDisconnectedError(str(exc))
+            err.after_send = False
+            raise err from exc
 
-        deadline = time.monotonic() + self._timeout
+        request_timeout = timeout_for(cmd) if cmd in HEAVY_COMMANDS or self._timeout is None else self._timeout
+        deadline = time.monotonic() + request_timeout
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:

@@ -4,6 +4,13 @@
 > el Orquestador mueve las más viejas a ~/.nerv/archive/abletonBridge-handoffs-[fecha].md
 > OJO: las entradas del 2026-11-22 quedaron ABAJO (violando la regla). Se dejan como están; desde 2026-11-24 vuelven arriba.
 
+### 2026-11-24 nerv-ai->nerv-orquestador T-023 (retorno)
+- estado: En revision QA. Errores del bridge llegan como `ToolError` ("CODE: msg", tambien excepciones inesperadas con tipo); timeout por comando (5 s lecturas, 30 s escrituras pesadas, env NEXO_MCP_TIMEOUT / NEXO_MCP_HEAVY_TIMEOUT); reintento unico solo para lecturas tras conexion caida.
+- archivos: mcp_server/abletonbridge_mcp/{client,stdio_server}.py; tests/test_mcp_server/{test_timeouts,test_stdio_server}.py; SKILL.md (Trampas). Protocolo y Remote Script intactos.
+- TDD: 20 tests rojos antes; suite 562 passed (antes 543). Escritura con timeout/caida tras enviar: mensaje "pudo haberse ejecutado, relee el estado".
+- riesgos: escrituras nunca se reintentan solas (el 1er write tras recrear la superficie sigue fallando, con mensaje claro). Sin validar en Live real. REINICIAR el proceso MCP (/mcp reconnect).
+- como probar: `.venv\Scripts\python -m pytest tests/test_mcp_server`; en Live, song.set con loop y place_audio parcial ya no deben dar FAILED.
+
 ### 2026-11-24 nerv-desktop->nerv-orquestador T-022 (retorno)
 - estado: En revision QA. `_serve_forever` envuelve `_handle_connection` en try/except: un OSError (10053/10054) u otra excepcion de UNA conexion ya no mata el thread de accept. Sin log (live_stderr sin flush); stdlib pura, protocolo intacto.
 - archivos: remote_script/AbletonBridge/server.py; tests/test_remote_script/test_server.py (+4 tests con sockets falsos: sendall 10053, recv 10054, no-OSError, after_response intacto).

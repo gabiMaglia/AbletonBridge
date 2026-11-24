@@ -4,7 +4,10 @@ sin tocar sus firmas (otro codigo los importa).
 
 - Un unico BridgeClient compartido, conectado de forma perezosa (la primera tool que se llama
   conecta; Live puede abrirse despues de Claude Code) y reconectado en la llamada siguiente
-  a una caida. Nunca se reintenta un comando ya enviado: podria duplicar un efecto en el set.
+  a una caida. Solo las lecturas de IDEMPOTENT_COMMANDS se reintentan (una vez); una escritura
+  ya enviada jamas se repite: podria duplicar un efecto en el set (T-023).
+- Todo error llega al modelo como ToolError ("CODE: mensaje"); cualquier otra excepcion del SDK
+  se enmascara como "Error executing tool", asi que tampoco se deja pasar un RuntimeError.
 - Resultados > MAX_RESULT_CHARS se vuelcan a `.cache/mcp_results/` y se devuelve un resumen
   (Claude Code corta las respuestas MCP en ~25k tokens).
 - stdout es del protocolo: todo log va a stderr. EOF en stdin termina el proceso limpio.
@@ -19,12 +22,20 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 from . import server as bridge_tools
-from .client import BridgeClient, BridgeCommandError, BridgeDisconnectedError, BridgeError
+from .client import (
+    BridgeClient,
+    BridgeCommandError,
+    BridgeDisconnectedError,
+    BridgeError,
+    BridgeTimeoutError,
+)
 
 try:  # mcp >= 2
     from mcp.server.mcpserver import MCPServer as _ServerClass
+    from mcp.server.mcpserver.exceptions import ToolError
 except ImportError:  # mcp 1.x
     from mcp.server.fastmcp import FastMCP as _ServerClass
+    from mcp.server.fastmcp.exceptions import ToolError
 
 MAX_RESULT_CHARS = 60_000
 RESULT_CACHE = Path(__file__).resolve().parents[2] / ".cache" / "mcp_results"
@@ -32,6 +43,11 @@ PREVIEW_CHARS = 1_500
 # Parametros de inyeccion/test de las funciones de server.py: no son parte del schema MCP.
 HIDDEN_PARAMS = frozenset({"client", "sleep", "clock", "cache_dir"})
 SPIKES_ENV = "NEXO_MCP_SPIKES"
+# Lecturas sin efecto en el set: unicas que se reintentan solas tras una conexion caida.
+IDEMPOTENT_COMMANDS = frozenset({
+    "ping", "state.get", "state.detail", "bridge.version", "return.list",
+    "locator.status", "automation.status", "meter.status",
+})
 
 INSTRUCTIONS = (
     "Puente a Ableton Live (Remote Script en 127.0.0.1:19845). Live debe estar abierto con el "
@@ -74,6 +90,38 @@ DESCRIPTIONS: Dict[str, str] = {
 }
 
 
+_MAY_HAVE_RUN = (
+    "El comando {cmd} pudo haberse ejecutado en Live: relee el estado (live_get_state) antes de "
+    "reintentar; reintentar a ciegas puede duplicar el efecto."
+)
+
+
+class _CallTracker:
+    """Envuelve el cliente por llamada: recuerda que comandos salieron y marca el error con su cmd."""
+
+    def __init__(self, client: Any) -> None:
+        self._client = client
+        self.commands: list = []
+
+    def send_request(self, cmd: str, params: Dict[str, Any]) -> Any:
+        self.commands.append(cmd)
+        try:
+            return self._client.send_request(cmd, params)
+        except BridgeError as exc:
+            if getattr(exc, "cmd", None) is None:
+                exc.cmd = cmd  # type: ignore[attr-defined]
+            raise
+
+    def ping(self) -> Any:
+        return self.send_request("ping", {})
+
+    def all_idempotent(self) -> bool:
+        return bool(self.commands) and all(c in IDEMPOTENT_COMMANDS for c in self.commands)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._client, name)
+
+
 class BridgeRuntime:
     """Cliente compartido, conexion perezosa, errores normalizados y guard de tamano."""
 
@@ -101,16 +149,47 @@ class BridgeRuntime:
     def call(self, fn: Callable[..., Any], arguments: Dict[str, Any]) -> Any:
         with self._lock:
             try:
-                client = self._ensure_client()
-                result = fn(client, **arguments)
-            except BridgeCommandError as exc:
-                raise RuntimeError(f"{exc.code}: {exc.message}") from exc
+                result = self._run(fn, arguments)
+            except ToolError:
+                raise
+            except Exception as exc:
+                raise ToolError(self._describe(exc)) from exc
+            return self._guard(result)
+
+    def _run(self, fn: Callable[..., Any], arguments: Dict[str, Any]) -> Any:
+        # Reintento unico: tras recrear Live la superficie, el primer request cae en el socket muerto.
+        for attempt in (1, 2):
+            tracker = _CallTracker(self._ensure_client())
+            try:
+                return fn(tracker, **arguments)
             except BridgeDisconnectedError as exc:
                 self._drop()
-                raise RuntimeError(f"{exc.code}: {exc}. Live abierto con el Remote Script cargado?") from exc
-            except BridgeError as exc:
-                raise RuntimeError(f"{exc.code}: {exc}") from exc
-            return self._guard(result)
+                if attempt == 1 and tracker.all_idempotent():
+                    continue
+                raise
+        raise AssertionError("unreachable")
+
+    def _describe(self, exc: Exception) -> str:
+        cmd = getattr(exc, "cmd", None)
+        if isinstance(exc, BridgeCommandError):
+            return f"{exc.code}: {exc.message}"
+        if isinstance(exc, BridgeDisconnectedError):
+            base = f"{exc.code}: {exc}."
+            if cmd is None:
+                return f"{base} Live abierto con el Remote Script cargado?"
+            if cmd in IDEMPOTENT_COMMANDS:
+                return f"{base} Se reintento una vez y fallo igual: Live abierto con el Remote Script cargado?"
+            if not exc.after_send:
+                return f"{base} El comando {cmd} no se envio a Live: es seguro reintentarlo."
+            return f"{base} {_MAY_HAVE_RUN.format(cmd=cmd)}"
+        if isinstance(exc, BridgeTimeoutError):
+            base = f"{exc.code}: {exc}."
+            if cmd is None or cmd in IDEMPOTENT_COMMANDS:
+                return base
+            return f"{base} {_MAY_HAVE_RUN.format(cmd=cmd)}"
+        if isinstance(exc, BridgeError):
+            return f"{exc.code}: {exc}"
+        return f"{type(exc).__name__}: {exc}"
 
     def _drop(self) -> None:
         self._ready = False
