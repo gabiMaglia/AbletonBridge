@@ -46,7 +46,7 @@
 ## Sprint 3 — Saneamiento + validación en Live (desde 2026-11-24)
 | ID | Ext | Tarea | Asignado | Estado | Niv | Criterios de aceptación | Rama |
 |----|-----|-------|----------|--------|-----|--------------------------|------|
-| T-018 | — | Saneamiento de engram + git | nerv-orquestador | En progreso | A | Backlog refleja T-002b..T-017; state al día; Q-xx reconciliadas con D-xx; ADR-002 cerrado según D-14; docs sin trackear commiteados; rama `main` creada y pusheada. | feature/T-002-scaffold |
+| T-018 | — | Saneamiento de engram + git | nerv-orquestador | En revisión QA | A | Backlog refleja T-002b..T-017; state al día; Q-xx reconciliadas con D-xx; ADR-002 cerrado según D-14; docs sin trackear commiteados; rama `main` creada y pusheada (opción A del PO: feature/T-002-scaffold renombrada a main, sin PR). | main |
 | T-019 | — | Sesión de verificación en Live: bloques VERIFICAR EN LIVE (T-003..T-017) | nerv-orquestador + PO | Backlog | S | Cada bloque marcado ✅/❌ con evidencia; bugs → tickets nuevos. Orden sugerido: T-011 → T-003* → T-009/T-010 → T-013 → T-012 → T-017. | — |
 | T-020 | — | QA por lotes de T-002b..T-017 | nerv-qa | Backlog | S | Veredicto por ticket. Depende de T-019 para los que tocan Live. | — |
 | T-021 | — | Ejecutar plan T03 contra Live real (primer tema end-to-end) | nerv-desktop | Backlog | A | El ejecutor del compositor aplica el plan T03 en un set nuevo; Gabriel valida a oído (D-01). Depende de T-019. | — |
