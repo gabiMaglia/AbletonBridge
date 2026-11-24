@@ -169,3 +169,119 @@ def test_command_error_from_handler_keeps_its_code() -> None:
     finally:
         client.close()
         server.stop()
+
+
+# --- T-022: el loop de accept sobrevive a fallos de una conexion ---------
+# Inyeccion de fallos con sockets falsos: determinista, sin carreras de
+# timing. Reproduce lo visto en el log real de Live 12.4.16 (WinError 10053).
+
+import threading
+
+PING_LINE = b'{"id":"1","cmd":"ping","params":{}}\n'
+
+
+class _FakeConn:
+    """Conexion falsa: entrega `incoming` y puede fallar en recv/sendall."""
+
+    def __init__(self, incoming=b"", recv_exc=None, send_exc=None) -> None:
+        self._incoming = incoming
+        self._recv_exc = recv_exc
+        self._send_exc = send_exc
+        self.sent = b""
+        self.closed = threading.Event()
+
+    def settimeout(self, _t) -> None:
+        pass
+
+    def recv(self, _n):
+        if self._recv_exc is not None:
+            raise self._recv_exc
+        data, self._incoming = self._incoming, b""
+        return data  # b"" = el cliente cerro
+
+    def sendall(self, data) -> None:
+        if self._send_exc is not None:
+            raise self._send_exc
+        self.sent += data
+
+    def close(self) -> None:
+        self.closed.set()
+
+
+class _FakeListener:
+    """Socket de escucha falso: entrega las conexiones en orden y luego timeout."""
+
+    def __init__(self, conns) -> None:
+        self._conns = list(conns)
+
+    def settimeout(self, _t) -> None:
+        pass
+
+    def accept(self):
+        import socket as socket_module
+
+        if self._conns:
+            return self._conns.pop(0), ("127.0.0.1", 0)
+        raise socket_module.timeout()
+
+    def close(self) -> None:
+        pass
+
+
+def _serve_with(conns):
+    server = BridgeServer(dispatcher=UIDispatcher(), live_info_provider=fake_live_info)
+    server._sock = _FakeListener(conns)
+    thread = threading.Thread(target=server._serve_forever, daemon=True)
+    thread.start()
+    return server, thread
+
+
+def _assert_second_client_served(bad_conn) -> None:
+    good = _FakeConn(incoming=PING_LINE)
+    server, thread = _serve_with([bad_conn, good])
+    try:
+        assert good.closed.wait(timeout=3.0), "el segundo cliente no fue atendido"
+        assert b'"pong":true' in good.sent.replace(b" ", b"")
+        assert thread.is_alive(), "el loop de accept murio"
+    finally:
+        server.stop()
+
+
+def test_sendall_connection_aborted_10053_does_not_kill_accept_loop() -> None:
+    """WinError 10053 (ConnectionAbortedError) en sendall: el cliente se fue a mitad de respuesta."""
+    bad = _FakeConn(
+        incoming=PING_LINE,
+        send_exc=ConnectionAbortedError(10053, "software caused connection abort"),
+    )
+    _assert_second_client_served(bad)
+    assert bad.closed.is_set()
+
+
+def test_recv_connection_reset_10054_does_not_kill_accept_loop() -> None:
+    """WinError 10054 (ConnectionResetError) en recv: el peer reseteo la conexion."""
+    bad = _FakeConn(recv_exc=ConnectionResetError(10054, "forcibly closed by remote host"))
+    _assert_second_client_served(bad)
+    assert bad.closed.is_set()
+
+
+def test_unexpected_exception_in_connection_does_not_kill_accept_loop() -> None:
+    """Una excepcion NO-OSError (p.ej. UnicodeDecodeError por bytes basura) no tumba el loop."""
+    bad = _FakeConn(incoming=b"\xff\xfe\n")
+    _assert_second_client_served(bad)
+    assert bad.closed.is_set()
+
+
+def test_after_response_still_runs_after_each_response() -> None:
+    """T-011: `after_response` se sigue corriendo tras la respuesta (bridge.reload)."""
+    good = _FakeConn(incoming=PING_LINE)
+    server = BridgeServer(dispatcher=UIDispatcher(), live_info_provider=fake_live_info)
+    ran = threading.Event()
+    server.after_response(ran.set)
+    server._sock = _FakeListener([good])
+    thread = threading.Thread(target=server._serve_forever, daemon=True)
+    thread.start()
+    try:
+        assert ran.wait(timeout=3.0)
+        assert b"pong" in good.sent
+    finally:
+        server.stop()
