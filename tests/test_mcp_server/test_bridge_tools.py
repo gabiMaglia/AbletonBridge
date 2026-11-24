@@ -81,3 +81,19 @@ def test_reload_command_error_is_propagated() -> None:
     c, clk = FakeClient(reload_error=BridgeTimeoutError("x")), Clock()
     with pytest.raises(BridgeTimeoutError):
         live_bridge_reload(c, sleep=clk.sleep, clock=clk.now)
+
+
+def test_bridge_stats_tool_sends_command_and_is_idempotent() -> None:
+    from mcp_server.abletonbridge_mcp import stdio_server
+    from mcp_server.abletonbridge_mcp.server import live_bridge_stats
+
+    class C:
+        sent = []
+
+        def send_request(self, cmd, params):
+            self.sent.append(cmd)
+            return {"stats": {}}
+
+    assert live_bridge_stats(C()) == {"stats": {}}
+    assert C.sent == ["bridge.stats"]
+    assert "bridge.stats" in stdio_server.IDEMPOTENT_COMMANDS

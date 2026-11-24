@@ -16,6 +16,7 @@ import time
 
 import pytest
 
+from remote_script.AbletonBridge import errors
 from remote_script.AbletonBridge.dispatcher import UIDispatcher
 
 
@@ -117,5 +118,6 @@ def test_run_blocking_propagates_exception_from_job() -> None:
 
 def test_run_blocking_times_out_if_pump_never_called() -> None:
     dispatcher = UIDispatcher()
-    with pytest.raises(TimeoutError):
+    with pytest.raises(errors.CommandError) as info:  # T-024: ahora es un error de dominio, no TimeoutError
         dispatcher.run_blocking(lambda: 1, timeout=0.1)
+    assert info.value.code == errors.DISPATCH_TIMEOUT
