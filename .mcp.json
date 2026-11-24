@@ -6,7 +6,8 @@
       "args": ["-m", "mcp_server.abletonbridge_mcp"],
       "env": {
         "PYTHONPATH": "C:\\Users\\Gabriel Maglia\\abletonBridge",
-        "PYTHONIOENCODING": "utf-8"
+        "PYTHONIOENCODING": "utf-8",
+        "NEXO_MCP_HEAVY_TIMEOUT": "130"
       }
     }
   }
