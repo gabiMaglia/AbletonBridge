@@ -347,6 +347,25 @@ reglas:
     criterio_gabriel: true
     fuente: [YT-OU-WOiQJSV7hjI, "A/B T-028"]
     confianza: alta                # D-13: el gusto es de Gabriel. Lo tentativo (CUANDO usarlo) lo cubre activa_por_defecto: false
+  filtro_oscuro_pre_break:
+    descripcion: >
+      Antes de un break, los graves (kick, rumble, bajo) se oscurecen con un low-pass que baja de
+      abierto (20 kHz) a ~150 Hz durante la SEGUNDA MITAD de la frase previa; los hats/top NO se
+      filtran y quedan brillantes arriba. En el break paran los graves. (Oscar Underdog "dark filters").
+      A/B a oido 2026-11-24 (T-028): 8 compases de groove + break, sin filtro vs con filtro -> gano CON filtro.
+    roles: [kick, rumble, bajo]
+    excluye: [top, hats]
+    dispositivo: "Auto Filter"
+    parametro: "Frequency"
+    desde_hz: 20000
+    hasta_hz: 150
+    tramo: "segunda_mitad_de_la_frase_previa_al_break"
+    via: automation.record      # lane real (en Arrangement los envelopes de clip solo modulan)
+    criterio_gabriel: true
+    fuente: [YT-OU-_aTzO6mdCZQ, "A/B T-028"]
+    confianza: alta
+    # Pendiente: implementar en composer (T-030). Convive con puente.filtro_master (HP del master);
+    # no probado junto con el.
   llamado_respuesta:
     descripcion: >
       La voz llama y otro rol responde: alternan de a 2 compases dentro de la frase. Gabriel RECHAZO

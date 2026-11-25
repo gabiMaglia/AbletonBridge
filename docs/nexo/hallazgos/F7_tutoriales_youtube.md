@@ -41,7 +41,7 @@
 - **Kick por zonas:** sub 45-55 Hz · thump 100-200 Hz · click > 200 Hz · bloat a recortar 300-500 Hz (5f_2CcqZ26U 01:30-06:30).
 - **Roll con acentos** dentro de las semicorcheas (no solo rampa de velocity) y **reverb que se abre hacia el final del roll** (WOiQJSV7hjI 07:00, 10:00). El perfil tiene el send del roll estático (-16).
 - **Roll en loop de 1-4 compases repetido 4 veces antes del break** (WOiQJSV7hjI 06:30-08:00).
-- **Filtro oscuro previo al break:** low-pass sobre los graves bajando hasta ~150 Hz, transición de la mitad del largo de la sección; los hats son lo único que conserva agudos (_aTzO6mdCZQ 01:30-09:00).
+- **Filtro oscuro previo al break:** low-pass sobre los graves bajando hasta ~150 Hz, transición de la mitad del largo de la sección; los hats son lo único que conserva agudos (_aTzO6mdCZQ 01:30-09:00). **A/B a oído 2026-11-24:** 8 compases de groove (kick nuar + rumble Audentity "model" + top) → break; sin filtro vs Auto Filter 20 kHz → 150 Hz en compases 5-9 grabado con automation.record sobre kick y rumble → **ganó CON filtro**. En el perfil como `reglas.filtro_oscuro_pre_break` (criterio_gabriel); implementación en el compositor: T-030.
 - **Jerarquía de groove por velocity:** downbeat > upbeat > semicorchea débil; acentuar una de cada dos semicorcheas débiles; contorno del shaker baja-media-alta-media (7lgyDq8N1J0). Insumo directo para la épica E-002.
 
 ### Contradice / tensiona (decide Gabriel)
