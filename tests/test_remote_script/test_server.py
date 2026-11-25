@@ -271,6 +271,53 @@ def test_unexpected_exception_in_connection_does_not_kill_accept_loop() -> None:
     assert bad.closed.is_set()
 
 
+def _serve_logging(conns, log):
+    server = BridgeServer(dispatcher=UIDispatcher(), live_info_provider=fake_live_info, log=log)
+    server._sock = _FakeListener(conns)
+    thread = threading.Thread(target=server._serve_forever, daemon=True)
+    thread.start()
+    return server, thread
+
+
+def _run_bad_then_good(bad, log):
+    good = _FakeConn(incoming=PING_LINE)
+    server, thread = _serve_logging([bad, good], log)
+    try:
+        assert good.closed.wait(timeout=3.0), "el segundo cliente no fue atendido"
+        assert thread.is_alive()
+    finally:
+        server.stop()
+
+
+def test_connection_errors_are_logged_once_with_exception_repr() -> None:
+    """T-022 (2): cada error de conexion se loguea una vez con tipo/repr de la excepcion."""
+    cases = [
+        (_FakeConn(incoming=PING_LINE, send_exc=ConnectionAbortedError(10053, "abort")), "ConnectionAbortedError"),
+        (_FakeConn(recv_exc=ConnectionResetError(10054, "reset")), "ConnectionResetError"),
+        (_FakeConn(incoming=b"\xff\xfe\n"), "UnicodeDecodeError"),
+    ]
+    for bad, exc_name in cases:
+        messages: list = []
+        _run_bad_then_good(bad, messages.append)
+        assert len(messages) == 1, messages
+        assert messages[0].startswith("AbletonBridge: connection error: ")
+        assert exc_name in messages[0]
+
+
+def test_normal_client_disconnect_is_not_logged() -> None:
+    """EOF (recv vacio) es un cierre normal, no un error."""
+    messages: list = []
+    _run_bad_then_good(_FakeConn(incoming=b""), messages.append)
+    assert messages == []
+
+
+def test_failing_logger_does_not_kill_accept_loop() -> None:
+    def boom(_msg: str) -> None:
+        raise RuntimeError("logger roto")
+
+    _run_bad_then_good(_FakeConn(recv_exc=ConnectionResetError(10054, "reset")), boom)
+
+
 def test_after_response_still_runs_after_each_response() -> None:
     """T-011: `after_response` se sigue corriendo tras la respuesta (bridge.reload)."""
     good = _FakeConn(incoming=PING_LINE)
