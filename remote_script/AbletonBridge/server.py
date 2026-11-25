@@ -58,7 +58,9 @@ class BridgeServer:
         preferred_port: int = DEFAULT_PORT,
         port_range: range = FALLBACK_PORT_RANGE,
         handlers: Optional[Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]]] = None,
+        log: Optional[Callable[[str], None]] = None,
     ) -> None:
+        self._log = log or (lambda _msg: None)
         self._handlers = handlers or {}
         self._dispatcher = dispatcher
         self._live_info_provider = live_info_provider
@@ -129,11 +131,18 @@ class BridgeServer:
                 break
             try:
                 self._handle_connection(conn)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
                 # Un cliente roto (10053/10054 u otro error) no puede matar el
                 # loop: si el thread muere, el puerto sigue LISTENING pero nadie
-                # atiende. Sin log: en Live sys.stderr (live_stderr) no tiene flush.
-                pass
+                # atiende. Se loguea por el callback (log_message de la surface,
+                # va a Log.txt); print/stderr no sirve: live_stderr no tiene flush.
+                self._safe_log(f"AbletonBridge: connection error: {exc!r}")
+
+    def _safe_log(self, message: str) -> None:
+        try:
+            self._log(message)
+        except Exception:  # noqa: BLE001 - un logger roto tampoco tumba el loop
+            pass
 
     def _handle_connection(self, conn: socket.socket) -> None:
         conn.settimeout(0.5)

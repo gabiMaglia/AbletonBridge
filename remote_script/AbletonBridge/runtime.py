@@ -31,7 +31,12 @@ class BridgeRuntime:
             preferred_port=preferred_port,
             port_range=port_range,
             handlers=self._build_handlers(),
+            log=self._log,
         )
+
+    def _log(self, message: str) -> None:
+        # El host es la ControlSurface: su log_message escribe en Log.txt de Live.
+        self.host.log_message(message)
 
     def song(self) -> Any:
         return self.host.song()
