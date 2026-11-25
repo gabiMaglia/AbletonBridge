@@ -46,7 +46,7 @@
 
 ### Contradice / tensiona (decide Gabriel)
 - ~~**Dónde recortar el barro del kick:** el perfil hace Bell -2 dB en **250 Hz**; Oscar recorta el bloat en **300-500 Hz**.~~ **DECIDIDO 2026-11-24 a oído (D-01):** A/B en Live con el kick de nuar, Bell -3 dB Q 0,71, 250 Hz vs 390 Hz → **ganó 390 Hz**. Aplicado en `perfiles/techno_peak_time.yaml` (mezcla.plantilla.kick, banda 3) como `criterio_gabriel`. Nota: la profundidad también pasó de -2 a -3 dB, porque así se escuchó.
-- **Forma del roll:** el perfil usa un roll que **acelera** (negras → corcheas → semicorcheas → fusas); Oscar usa semicorcheas **constantes con acentos**. No es contradicción dura: son dos técnicas; falta decidir cuál es default o si conviven.
+- **Forma del roll:** el perfil usa un roll que **acelera** (negras → corcheas → semicorcheas → fusas); Oscar usa semicorcheas **constantes con acentos**. **A/B a oído 2026-11-24:** mismo snare (Audentity bright), -17 dB, sin reverb, aterrizando en el compás 17 con el kick → **a Gabriel le gustan AMBOS: conviven**. Variante B probada: loop de 4 compases × 4, acento cada 3 semicorcheas (vel 115 / 75), patrón reiniciado en cada loop. Pendiente: criterio de cuándo usar cada uno (no entra al compositor hasta definirlo).
 
 ## 4. Conclusión del spike
 El pipeline **vale la pena** con dos condiciones:

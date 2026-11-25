@@ -37,7 +37,7 @@ def test_t03_usa_archivos_variados_y_ecos_de_voz():
     rutas = {a.datos.get("ruta") for a in plan.acciones if a.rol == "reverse" and a.tipo == CLIP_ONESHOT}
     assert len(rutas) >= 3
     assert any(a.regla == "delay_throws_voces" for a in plan.acciones)
-    assert plan.meta["experimentales"] == {"llamado_respuesta": False}
+    assert plan.meta["experimentales"] == {"llamado_respuesta": False, "roll_groove": False}
 
 
 def test_los_archivos_alternativos_del_t03_existen_o_se_omite():

@@ -85,7 +85,7 @@ def test_el_plan_t02_like_agrupa_en_pocas_pasadas(ctx_t02):
 def test_markdown_lista_decisiones_y_reglas_experimentales(ctx_t02):
     plan = crear_plan(ctx_t02, nombre="T03")
     md = plan_a_markdown(plan)
-    assert plan.meta["experimentales"] == {"llamado_respuesta": False}
+    assert plan.meta["experimentales"] == {"llamado_respuesta": False, "roll_groove": False}
     assert "## Decisiones de arreglo" in md
     for texto in ("corte_previo_al_drop", "ultimo_compas", "64.3", "192", "experimental"):
         assert texto in md, texto

@@ -328,6 +328,25 @@ reglas:
     conserva: [snare_fill]
     fuente: [T1, T6]
     confianza: media
+  roll_groove:
+    descripcion: >
+      Roll de snare en semicorcheas CONSTANTES con acento cada 3 (Oscar Underdog), SOBRE el groove
+      (la bateria sigue sonando), para llevar hacia un bridge/break. Convive con el roll que acelera
+      (`puente.roll_snare`), que queda como default para TERMINAR un puente. A/B a oido 2026-11-24
+      (T-028): a Gabriel le gustan ambos; cual usar "depende del tema" -> se decide por tema, nunca solo.
+    experimental: true
+    activa_por_defecto: false      # NO implementado en composer todavia (ver T-029)
+    rol: snare_fill
+    nota_midi: 60
+    loop_compases: 4               # Oscar: loop de 1-4 compases
+    repeticiones: 4                # Oscar: "4 veces" antes del break
+    paso_beats: 0.25
+    acento_cada: 3                 # semicorcheas; patron reiniciado en cada loop
+    velocity: {acento: 115, resto: 75}
+    reverb_abre_al_final: null     # Oscar lo hace; NO probado en el A/B (se prueba aparte)
+    criterio_gabriel: true
+    fuente: [YT-OU-WOiQJSV7hjI, "A/B T-028"]
+    confianza: alta                # D-13: el gusto es de Gabriel. Lo tentativo (CUANDO usarlo) lo cubre activa_por_defecto: false
   llamado_respuesta:
     descripcion: >
       La voz llama y otro rol responde: alternan de a 2 compases dentro de la frase. Gabriel RECHAZO
