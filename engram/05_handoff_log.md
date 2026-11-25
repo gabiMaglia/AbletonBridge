@@ -4,6 +4,11 @@
 > el Orquestador mueve las más viejas a ~/.nerv/archive/abletonBridge-handoffs-[fecha].md
 > OJO: las entradas del 2026-11-22 quedaron ABAJO (violando la regla). Se dejan como están; desde 2026-11-24 vuelven arriba.
 
+### 2026-11-24 22:15 CIERRE DE SESIÓN
+- Hecho hoy: saneamiento (T-018) + `main` creada/pusheada; T-019 verificó en Live 12.4.16 casi todo el Sprint 2 y destapó 4 bugs (T-022/T-023/T-024 arreglados, QA Done, mergeados) + causa externa de la lentitud (motor de audio trabado, DT-09).
+- Próximo paso: T-020 QA por lotes de T-002b..T-017 con la evidencia de Live ya cargada; luego T-026 (spike one-shot).
+- Quien retoma: nerv-qa (T-020), luego nerv-desktop (T-026).
+
 ### 2026-11-24 nerv-desktop->nerv-orquestador T-022 rework (retorno)
 - estado: En revision QA. Defecto QA corregido: los errores de conexion (10053/10054/cualquier Exception) ahora se loguean una vez como `AbletonBridge: connection error: {exc!r}`; EOF normal no se loguea. Comentario enganoso corregido.
 - archivos: remote_script/AbletonBridge/{server,runtime}.py (BridgeServer(log=...) opcional, default no-op; runtime pasa host.log_message); tests/test_remote_script/test_server.py (+3).
