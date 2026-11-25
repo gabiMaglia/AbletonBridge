@@ -4,6 +4,11 @@
 > el Orquestador mueve las más viejas a ~/.nerv/archive/abletonBridge-handoffs-[fecha].md
 > OJO: las entradas del 2026-11-22 quedaron ABAJO (violando la regla). Se dejan como están; desde 2026-11-24 vuelven arriba.
 
+### 2026-11-24 23:45 CIERRE DE SESIÓN (2)
+- Hecho tras el 1er cierre: T-022 rework aprobado + merge/push; spike T-028 (Oscar Underdog, 5 videos → F7) y 3 A/B a oído en Live que entraron al perfil (kick 390 Hz, roll_groove, filtro_oscuro_pre_break); alta T-029/T-030.
+- Próximo paso: push de main (5 commits locales); A/B de jerarquía de groove por velocity; T-020 QA por lotes.
+- Quien retoma: nerv-orquestador con el PO (A/B en Live), nerv-qa (T-020).
+
 ### 2026-11-24 22:15 CIERRE DE SESIÓN
 - Hecho hoy: saneamiento (T-018) + `main` creada/pusheada; T-019 verificó en Live 12.4.16 casi todo el Sprint 2 y destapó 4 bugs (T-022/T-023/T-024 arreglados, QA Done, mergeados) + causa externa de la lentitud (motor de audio trabado, DT-09).
 - Próximo paso: T-020 QA por lotes de T-002b..T-017 con la evidencia de Live ya cargada; luego T-026 (spike one-shot).

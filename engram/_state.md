@@ -1,10 +1,10 @@
-# STATE — abletonBridge · actualizado: 2026-11-24 22:15
+# STATE — abletonBridge · actualizado: 2026-11-24 23:45
 
-**Sprint:** 3 — Saneamiento + validación en Live. T-018, T-022, T-023, T-024 Done (QA). T-019 (verificación en Live) en revisión QA.
-**Rama activa:** main (pusheada, b03b85b+) → target: main. Ramas de fix mergeadas y borradas. Suite: 579 verdes.
-**En curso:** T-020 QA por lotes de T-002b..T-017 (nerv-qa, To Do: evidencia de Live ya cargada en cada fila).
-**Bloqueos:** ninguno. Deuda conocida: T-025 (cliente 30 s < STARTED_CAP 120 s; mitigado con NEXO_MCP_HEAVY_TIMEOUT=130 en .mcp.json).
-**Próximo paso sugerido:** T-020 (QA por lotes) → T-026 (spike one-shot, falla en Live) → T-021 (plan T03 end-to-end en Live).
-**Ojo operativo:** si Live se pone lento, buscar `Audio queue timeout` en Log.txt y reiniciar Live (DT-09). Deploy del Remote Script = copiar a User Library + `live_bridge_reload` (reiniciar la Superficie de Control NO recarga código).
-**Marco vigente:** uso personal, Live 12.4.x (D-09/D-10); testeo a oído (D-01); nunca automatizar volume (D-15); mezcla = premaster (D-16).
-**Preguntas abiertas al PO:** 3 (Q-004 parámetros de entrada, Q-005 formato de perfiles, Q-007 S/C EQ del sidechain) + canal de YouTube para el spike de guías (T-028 propuesto).
+**Sprint:** 3 — Saneamiento + validación en Live. T-018, T-022, T-023, T-024 Done (QA). T-019 en revisión QA. T-028 (spike YouTube) en revisión QA.
+**Rama activa:** main. origin/main = b03b85b+cierre; **5 commits locales SIN PUSH** (spike T-028 + 3 criterios a oído en el perfil). Suite: 579 verdes.
+**En curso:** nada en ejecución. Próximos: T-020 (QA por lotes, nerv-qa) · T-029/T-030 (compositor: roll_groove y filtro oscuro, nerv-desktop) · T-026 (spike one-shot).
+**Bloqueos:** ninguno. Deuda: T-025 (timeouts, mitigado), 6 Done sin engram/qa/<T>.md (P-4), hook de métricas no instalado.
+**Próximo paso sugerido:** pushear main; seguir el spike T-028 con la jerarquía de groove por velocity (A/B en Live, insumo E-002).
+**Hecho a oído hoy (perfil techno_peak_time):** kick bloat 390 Hz -3 dB · roll_groove (convive con el roll que acelera) · filtro_oscuro_pre_break. Detalle en docs/nexo/hallazgos/F7_tutoriales_youtube.md.
+**Ojo operativo:** Live lento → `Audio queue timeout` en Log.txt → reiniciar Live. Deploy = copiar a User Library + `live_bridge_reload`. Master del PO en -35 dB (no tiene control de volumen externo): no subirlo.
+**Preguntas abiertas al PO:** 3 (Q-004, Q-005, Q-007 S/C EQ del sidechain).
