@@ -502,7 +502,10 @@ mezcla:
       eq:
         - {banda: 1, tipo: "High Pass 12dB", hz: 25}
         - {banda: 2, tipo: "Bell", hz: 62, gain_db: 2}
-        - {banda: 3, tipo: "Bell", hz: 250, gain_db: -2}
+        # Recorte del "bloat": A/B a oído 2026-11-24 (T-028) sobre el kick de nuar, Bell -3 dB Q 0,71:
+        # 250 Hz (valor anterior) vs 390 Hz (centro de 300-500 Hz, Oscar Underdog 5f_2CcqZ26U 06:30).
+        # Ganó 390 Hz. criterio_gabriel, confianza alta para este banda (D-13).
+        - {banda: 3, tipo: "Bell", hz: 390, gain_db: -3, criterio_gabriel: true, fuente: [YT-OU-5f_2CcqZ26U, "A/B T-028"]}
         - {banda: 4, tipo: "Bell", hz: 3500, gain_db: 2}
       dinamica:
         dispositivo: "Drum Buss"

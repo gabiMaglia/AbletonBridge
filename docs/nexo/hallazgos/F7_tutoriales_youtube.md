@@ -45,7 +45,7 @@
 - **Jerarquía de groove por velocity:** downbeat > upbeat > semicorchea débil; acentuar una de cada dos semicorcheas débiles; contorno del shaker baja-media-alta-media (7lgyDq8N1J0). Insumo directo para la épica E-002.
 
 ### Contradice / tensiona (decide Gabriel)
-- **Dónde recortar el barro del kick:** el perfil hace Bell -2 dB en **250 Hz**; Oscar recorta el bloat en **300-500 Hz**.
+- ~~**Dónde recortar el barro del kick:** el perfil hace Bell -2 dB en **250 Hz**; Oscar recorta el bloat en **300-500 Hz**.~~ **DECIDIDO 2026-11-24 a oído (D-01):** A/B en Live con el kick de nuar, Bell -3 dB Q 0,71, 250 Hz vs 390 Hz → **ganó 390 Hz**. Aplicado en `perfiles/techno_peak_time.yaml` (mezcla.plantilla.kick, banda 3) como `criterio_gabriel`. Nota: la profundidad también pasó de -2 a -3 dB, porque así se escuchó.
 - **Forma del roll:** el perfil usa un roll que **acelera** (negras → corcheas → semicorcheas → fusas); Oscar usa semicorcheas **constantes con acentos**. No es contradicción dura: son dos técnicas; falta decidir cuál es default o si conviven.
 
 ## 4. Conclusión del spike
