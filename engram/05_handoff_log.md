@@ -4,6 +4,12 @@
 > el Orquestador mueve las más viejas a ~/.nerv/archive/abletonBridge-handoffs-[fecha].md
 > OJO: las entradas del 2026-11-22 quedaron ABAJO (violando la regla). Se dejan como están; desde 2026-11-24 vuelven arriba.
 
+### 2026-11-24 nerv-desktop->nerv-orquestador T-022 rework (retorno)
+- estado: En revision QA. Defecto QA corregido: los errores de conexion (10053/10054/cualquier Exception) ahora se loguean una vez como `AbletonBridge: connection error: {exc!r}`; EOF normal no se loguea. Comentario enganoso corregido.
+- archivos: remote_script/AbletonBridge/{server,runtime}.py (BridgeServer(log=...) opcional, default no-op; runtime pasa host.log_message); tests/test_remote_script/test_server.py (+3).
+- TDD: 3 tests rojos antes (log una vez por tipo de error, EOF sin log, logger roto no mata el loop); suite 579 passed (antes 576).
+- riesgos: logger protegido con try/except; sin modulo nuevo, `bridge.reload` alcanza. Sin validar en Live real.
+
 ### 2026-11-24 nerv-desktop->nerv-orquestador T-024 (retorno)
 - estado: En revision QA. `run_blocking` ahora cancela el job que vence SIN empezar (error `DISPATCH_TIMEOUT` "no se ejecuto: Live no atendio la cola en N s", nunca corre despues) y espera al que YA empezo (tope duro 120 s). Timeout por comando: lecturas 4 s, pesadas 25 s (< 5 s / 30 s del cliente; test de invariante importa ambos mapas).
 - archivos: remote_script/AbletonBridge/{dispatcher,errors,server,runtime}.py; mcp_server/.../{server,stdio_server}.py (tool `live_bridge_stats`, idempotente); tests/test_remote_script/test_dispatch_timeouts.py (+14), test_dispatcher.py, test_bridge_tools.py; contrato 04 + SKILL.md.
