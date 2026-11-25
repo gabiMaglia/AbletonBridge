@@ -1,0 +1,107 @@
+video: WOiQJSV7hjI
+titulo: "Easy ideas: snare rolls (the iconic techno climax)"
+items:
+  - elemento: roll
+    parametro: "subdivision del roll"
+    valor: "cada 16th note"
+    tipo: dicho
+    timestamp: "02:00"
+    cita: "let's do a roll snare roll, which just means playing it every 16th note"
+  - elemento: snare
+    parametro: "patron de acento de referencia (groove)"
+    valor: "cada 3 (transcrito '316th notes', ASR ambiguo)"
+    tipo: dicho
+    timestamp: "04:00"
+    cita: "a groovy accent pattern is every 316th notes"
+  - elemento: roll
+    parametro: "patron de acentos en el roll"
+    valor: "1 acento, 2 sin acento, 3 con acento (resto no dicho)"
+    tipo: dicho
+    timestamp: "07:00"
+    cita: "we would do one accent, two unacented, and then the third one accented"
+  - elemento: snare
+    parametro: "snappy del 909"
+    valor: "snappy al minimo (all the way down)"
+    tipo: dicho
+    timestamp: "02:30"
+    cita: "Let's turn down snappy all the way."
+  - elemento: snare
+    parametro: "tone (largo/corto de la parte de ruido)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "03:00"
+    cita: "use tone to make that white noisy part short or long"
+  - elemento: snare
+    parametro: "velocity de las notas del roll (bajar y acentuar)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "07:00"
+    cita: "bringing down these little lollipops here"
+  - elemento: roll
+    parametro: "subdivision enviada al hardware (Lancer's Lash)"
+    valor: "16th notes"
+    tipo: dicho
+    timestamp: "13:00"
+    cita: "I'm just sending 16th notes to this thing."
+  - elemento: snare
+    parametro: "modelo de timbre (Lancer's Lash)"
+    valor: "slap, modal, physical modeling, FM, brains, blend"
+    tipo: dicho
+    timestamp: "13:30"
+    cita: "there's a slap, modal, physical modeling, and FM, and brains, and blend."
+  - elemento: arreglo
+    parametro: "ubicacion del roll en el tema"
+    valor: "en el break"
+    tipo: dicho
+    timestamp: "05:30"
+    cita: "And then we're going to do a snare roll."
+  - elemento: arreglo
+    parametro: "longitud del loop previo al break"
+    valor: "1, 2, 3 o 4 compases"
+    tipo: dicho
+    timestamp: "06:30"
+    cita: "make a one, two, three, four bar loop before the break"
+  - elemento: arreglo
+    parametro: "repeticiones del loop"
+    valor: "4 veces"
+    tipo: dicho
+    timestamp: "08:00"
+    cita: "now it's going to repeat four times."
+  - elemento: arreglo
+    parametro: "consolidar clip en un solo MIDI"
+    valor: "Cmd+J (command J)"
+    tipo: dicho
+    timestamp: "08:00"
+    cita: "do command J to consolidate this clip."
+  - elemento: fx
+    parametro: "reverb wet (automatizado hacia el final)"
+    valor: "seco al inicio, wet hacia el final"
+    tipo: dicho
+    timestamp: "10:00"
+    cita: "keep it fully dry and then make it wet"
+  - elemento: arreglo
+    parametro: "uso del roll en el break"
+    valor: null
+    tipo: opinion
+    timestamp: "04:30"
+    cita: "if you do this in the break of a techno track, you're going to have a good time"
+  - elemento: mezcla
+    parametro: "nivel de la capa del roll"
+    valor: null
+    tipo: opinion
+    timestamp: "15:00"
+    cita: "Just something that adds some tension and release."
+gaps_visuales:
+  - timestamp: "02:30"
+    que_falta: "valores de tune y tone del 909 snare (perillas no dichas)"
+  - timestamp: "07:00"
+    que_falta: "velocity numerica de cada nota del patron de acentos"
+  - timestamp: "09:30"
+    que_falta: "valores de la automatizacion de reverb wet y de la curva de acento"
+  - timestamp: "13:00"
+    que_falta: "valor de decay y de tambre elegido en el Lancer's Lash"
+resumen_utilidad:
+  items_dicho: 11
+  items_en_pantalla: 2
+  items_opinion: 2
+  nota: "Muy util para reglas de roll (subdivision 16th, patron de acentos, loop de 4 compases antes del break); faltan velocities y valores de tone para cerrar el patron."

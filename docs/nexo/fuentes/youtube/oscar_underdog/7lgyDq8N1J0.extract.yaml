@@ -1,0 +1,81 @@
+video: 7lgyDq8N1J0
+titulo: "An effortless way to add bounce and groove in techno"
+items:
+  - elemento: groove
+    parametro: "16th notes debiles entre pulsos (flappy 16ths)"
+    valor: null
+    tipo: opinion
+    timestamp: "00:30"
+    cita: "And then you've got the weak 16th moments right here in between."
+  - elemento: groove
+    parametro: "jerarquia de pulsos (downbeat, upbeat, 16th debil)"
+    valor: "downbeat > upbeat > 16th debil"
+    tipo: dicho
+    timestamp: "00:30"
+    cita: "These are the down beats of your pulse, your 1 2 3 4."
+  - elemento: arreglo
+    parametro: "dibujar los 16th flappy en la bateria (toms, hats, perc)"
+    valor: null
+    tipo: opinion
+    timestamp: "01:00"
+    cita: "You can accent these with your low toms."
+  - elemento: groove
+    parametro: "shaker contour (curva de velocity)"
+    valor: "baja, media, alta, media"
+    tipo: dicho
+    timestamp: "05:00"
+    cita: "Low velocity, mid velocity, high velocity, mid velocity."
+  - elemento: groove
+    parametro: "sincopa: priorizar uno de los 16th debiles"
+    valor: null
+    tipo: opinion
+    timestamp: "05:00"
+    cita: "taking one of those weak 16th notes and really prioritizing it quite highly"
+  - elemento: groove
+    parametro: "acentuar una de cada dos 16th debiles"
+    valor: "una de cada dos 16th debiles"
+    tipo: dicho
+    timestamp: "04:30"
+    cita: "it doesn't play every single one of those flappy 16s, but one of the two"
+  - elemento: hats
+    parametro: "hats con 16th flappy agregados (ejemplo)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "04:00"
+    cita: "notice when the flappy 16th notes get added"
+  - elemento: bajo
+    parametro: "bajo con foco en los 16th flappy (ejemplo)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "04:00"
+    cita: "Notice the baseline here."
+  - elemento: perc
+    parametro: "contour de shaker aplicado a toms"
+    valor: null
+    tipo: opinion
+    timestamp: "06:00"
+    cita: "This works just as well with toms."
+  - elemento: groove
+    parametro: "shuffle (cantidad)"
+    valor: null
+    tipo: opinion
+    timestamp: "07:30"
+    cita: "go easy on it, but experiment with it"
+  - elemento: groove
+    parametro: "ultra lows con foco en 16th flappy (ejemplo)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "04:30"
+    cita: "Notice the lows here, the ultra lows."
+gaps_visuales:
+  - timestamp: "03:00"
+    que_falta: "valores de velocity para 'menos intensa' (dicho sin numeros)"
+  - timestamp: "04:00"
+    que_falta: "velocities y posiciones exactas de los ejemplos de hats y bajo"
+  - timestamp: "07:30"
+    que_falta: "cantidad de shuffle usada en los ejemplos"
+resumen_utilidad:
+  items_dicho: 3
+  items_en_pantalla: 2
+  items_opinion: 6
+  nota: "Util para una regla de groove (jerarquia de pulsos y shaker contour con velocities baja-media-alta-media); el shuffle y las velocities concretas no se dicen."

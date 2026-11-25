@@ -1,0 +1,81 @@
+video: _aTzO6mdCZQ
+titulo: "Easy ideas: dark filters (make the details shine through)"
+items:
+  - elemento: filtro
+    parametro: "low-pass agresivo y amplio sobre la mayoria de elementos"
+    valor: null
+    tipo: opinion
+    timestamp: "00:00"
+    cita: "we're going to use very aggressive and broad low-pass filters to cut away all the high frequencies on most elements"
+  - elemento: filtro
+    parametro: "low-pass aplicado a drums, reverb y synth"
+    valor: "low-pass en drums, reverb y synth (sin frecuencia dicha)"
+    tipo: dicho
+    timestamp: "00:30"
+    cita: "So we low-pass all the drums. We low-pass any reverb that there is. We low-pass the synth."
+  - elemento: hats
+    parametro: "elemento que conserva los agudos"
+    valor: "hats (solo ellos mantienen agudos)"
+    tipo: dicho
+    timestamp: "01:30"
+    cita: "imagine I want to keep this high hats up top."
+  - elemento: filtro
+    parametro: "auto filter del grupo de lows (cutoff)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "04:00"
+    cita: "bring it down so that it already becomes only about the subs"
+  - elemento: filtro
+    parametro: "automatizacion del cutoff de lows (no activo la mayor parte; bajar antes del break)"
+    valor: "no activo la mayor parte del tiempo; bajar antes del break"
+    tipo: dicho
+    timestamp: "05:30"
+    cita: "I want this to not be in effect most of the time, and then I want it to come down in anticipation of this break"
+  - elemento: filtro
+    parametro: "cutoff del filtro de lows al final"
+    valor: "150 Hz"
+    tipo: dicho
+    timestamp: "06:00"
+    cita: "About 150 hertz. Let's say that's a good place for it to be."
+  - elemento: filtro
+    parametro: "snap de la automatizacion (mantener Cmd)"
+    valor: "Cmd (evitar snap al grid)"
+    tipo: dicho
+    timestamp: "06:00"
+    cita: "I'm holding down command, because otherwise this is going to snap to the grid"
+  - elemento: filtro
+    parametro: "automatizar el on/off del filtro de highs"
+    valor: null
+    tipo: opinion
+    timestamp: "06:30"
+    cita: "you could even automate the on-off button if you want"
+  - elemento: arreglo
+    parametro: "duracion de la transicion de automatizacion"
+    valor: "mitad de la longitud"
+    tipo: dicho
+    timestamp: "09:00"
+    cita: "Make it half as long."
+  - elemento: fx
+    parametro: "ganancia de Utility para el riser (que entre antes)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "08:30"
+    cita: "put a little utility, show automation in the new lane, and boost that a little bit"
+  - elemento: filtro
+    parametro: "offset del filtro de leads (bajar demasiado oscuro)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "09:30"
+    cita: "the filter on our leads dips down a bit too dark"
+gaps_visuales:
+  - timestamp: "04:00"
+    que_falta: "frecuencia de cutoff del auto filter de lows (dijo 'bring it down' sin valor)"
+  - timestamp: "07:00"
+    que_falta: "cutoff del auto filter de highs en el punto 'hop up'"
+  - timestamp: "09:30"
+    que_falta: "valor del dip del filtro de leads y de la utility del riser"
+resumen_utilidad:
+  items_dicho: 6
+  items_en_pantalla: 3
+  items_opinion: 2
+  nota: "Util para una regla de low-pass (lows a 150 Hz, highs con on/off automatizado, transicion a mitad de longitud); el resto son gestos en pantalla sin valor."

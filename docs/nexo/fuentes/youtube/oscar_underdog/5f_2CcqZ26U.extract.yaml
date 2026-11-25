@@ -1,0 +1,121 @@
+video: 5f_2CcqZ26U
+titulo: "Create HUGE kicks from simple foley sounds"
+items:
+  - elemento: kick
+    parametro: "frecuencia de asentamiento del pitch (sub)"
+    valor: "55 Hz (dijo 'entre 45 y 55', eligio 55)"
+    tipo: dicho
+    timestamp: "01:30"
+    cita: "Let's say 55 hertz. It's a sine wave that goes boo really quickly"
+  - elemento: kick
+    parametro: "rango del thump (pitch sweep o filtro)"
+    valor: "100-200 Hz"
+    tipo: dicho
+    timestamp: "02:00"
+    cita: "The thump is something that maybe around let's say 100 or 200 h that hits you in the chest."
+  - elemento: kick
+    parametro: "zona de click"
+    valor: "por encima de 200 Hz"
+    tipo: dicho
+    timestamp: "02:30"
+    cita: "up above 200 h, has everything that we might simplify and call the click"
+  - elemento: rumble
+    parametro: "capa de rumble (ruido low-pass que llena el espacio)"
+    valor: null
+    tipo: opinion
+    timestamp: "03:00"
+    cita: "the sort of low-passed noisy bits that are going to fill up the space between kick drums"
+  - elemento: otro
+    parametro: "device de sampler"
+    valor: "Sampler (en lugar de Simpler)"
+    tipo: dicho
+    timestamp: "03:30"
+    cita: "we are going to right click on it and just replace the Simpler with Sampler."
+  - elemento: kick
+    parametro: "trim del inicio del sample"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "04:00"
+    cita: "There's a perfect place."
+  - elemento: kick
+    parametro: "release del amp envelope"
+    valor: "maximo"
+    tipo: dicho
+    timestamp: "04:00"
+    cita: "I want my release to be at the max."
+  - elemento: kick
+    parametro: "decay del amp envelope"
+    valor: "no (solo release largo)"
+    tipo: dicho
+    timestamp: "04:30"
+    cita: "And maybe do we care about adding decay? No. We just want a long release."
+  - elemento: kick
+    parametro: "pitch envelope (thump)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "05:00"
+    cita: "we can add a little bit of a thump with a pitch envelope."
+  - elemento: filtro
+    parametro: "filtro del kick (cierre y apertura)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "05:30"
+    cita: "Not to this level, but to this level, yes."
+  - elemento: kick
+    parametro: "shaper"
+    valor: "shaper duro (hard)"
+    tipo: dicho
+    timestamp: "05:30"
+    cita: "Usually a bit of a hard shaper."
+  - elemento: kick
+    parametro: "sustain mode (evitar click y pop al final)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "06:00"
+    cita: "I'm going to set a sustain mode like this."
+  - elemento: master
+    parametro: "plugin de filtro de sub (preferencia personal)"
+    valor: "Sub Filter (plugin)"
+    tipo: opinion
+    timestamp: "06:00"
+    cita: "this is my personal preference, there's this little plugin called the sub filter"
+  - elemento: kick
+    parametro: "rango de bloat a bajar"
+    valor: "300-500 Hz"
+    tipo: dicho
+    timestamp: "06:30"
+    cita: "I would say around maybe 300 to 500 h."
+  - elemento: mezcla
+    parametro: "Drum Bus de Ableton (saturacion, crunch, amortiguar agudos)"
+    valor: "activar; anadir crunch; dampen para quitar brillo"
+    tipo: dicho
+    timestamp: "07:00"
+    cita: "Another cool thing to add is always Ableton's drum bus."
+  - elemento: kick
+    parametro: "segundo elemento (upbeat) muteado"
+    valor: "muy poco attack"
+    tipo: dicho
+    timestamp: "08:00"
+    cita: "It's really muted with very little attack."
+  - elemento: filtro
+    parametro: "low-pass sobre el kick (seccion experimental)"
+    valor: null
+    tipo: en_pantalla
+    timestamp: "08:30"
+    cita: "let's put a low-pass filter on here and just keep that nice heaviness"
+gaps_visuales:
+  - timestamp: "04:00"
+    que_falta: "punto exacto de inicio del trim del sample"
+  - timestamp: "05:30"
+    que_falta: "valor de cutoff del filtro (dijo 'este nivel' sin numero)"
+  - timestamp: "06:00"
+    que_falta: "modo de sustain elegido y sus parametros"
+  - timestamp: "07:00"
+    que_falta: "cantidad de crunch y de dampen en el Drum Bus"
+  - timestamp: "08:30"
+    que_falta: "frecuencia de corte del low-pass sobre el kick"
+resumen_utilidad:
+  items_dicho: 10
+  items_en_pantalla: 5
+  items_opinion: 2
+  nota: "Buena para una receta de kick (55 Hz de sub, thump 100-200, bloat 300-500, release max); la mayoria de cortes y cantidades en pantalla, asi que faltan valores para reglas duras."

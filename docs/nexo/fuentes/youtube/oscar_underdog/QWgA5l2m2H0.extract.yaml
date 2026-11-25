@@ -1,0 +1,91 @@
+video: QWgA5l2m2H0
+titulo: "Can you learn to mix techno in one day?"
+items:
+  - elemento: mezcla
+    parametro: "nivel de fader como herramienta principal de mezcla"
+    valor: null
+    tipo: opinion
+    timestamp: "02:30"
+    cita: "the level of your fader will be the strongest tool whatever in your toolbox to craft the mix"
+  - elemento: mezcla
+    parametro: "balance de nivel como primer paso (sketch)"
+    valor: null
+    tipo: opinion
+    timestamp: "03:00"
+    cita: "level balance is the first move that will sketch your track."
+  - elemento: kick
+    parametro: "posicion del kick en la mezcla (adelante)"
+    valor: null
+    tipo: opinion
+    timestamp: "04:00"
+    cita: "And the kick will always be up kind of up front."
+  - elemento: mezcla
+    parametro: "referencia de movimiento de fader ('1 decel' = 1 dB, transcrito por ASR)"
+    valor: "1 dB (indicador, no regla)"
+    tipo: opinion
+    timestamp: "05:30"
+    cita: "if they move the fader by more than one decel and that it feels wrong"
+  - elemento: arreglo
+    parametro: "backbone: elementos que sostienen el tema"
+    valor: "kick, bajo, lead o percusion caracteristica, drone, hats (si hacen falta)"
+    tipo: dicho
+    timestamp: "06:30"
+    cita: "Usually in techno you'll have the kick, you'll have the bass and a lead element"
+  - elemento: hats
+    parametro: "hats como parte del backbone"
+    valor: null
+    tipo: opinion
+    timestamp: "07:00"
+    cita: "Sometimes a high hat really needs to be there."
+  - elemento: mezcla
+    parametro: "orden de mezcla desde el low end"
+    valor: null
+    tipo: opinion
+    timestamp: "07:30"
+    cita: "starting with the low end element because low end is usually what takes up the most energy"
+  - elemento: mezcla
+    parametro: "orden de mezcla segun estilo (voz en pop, bajo en drum and bass)"
+    valor: null
+    tipo: opinion
+    timestamp: "08:30"
+    cita: "if you're mixing pop music, you will start with the vocal. If you're mixing drum and bass, you'll start with the the the bass."
+  - elemento: arreglo
+    parametro: "escuchar el arreglo sin mirar la pantalla"
+    valor: null
+    tipo: opinion
+    timestamp: "14:30"
+    cita: "Now do the same exercise without watching the screen."
+  - elemento: mezcla
+    parametro: "comparacion con bypass (ojos cerrados, alternar varias veces)"
+    valor: "ojos cerrados, alternar bypass varias veces antes de decidir"
+    tipo: dicho
+    timestamp: "15:00"
+    cita: "I hover the mouse on on top of the bypass. Close my eyes."
+  - elemento: filtro
+    parametro: "EQ de resonancias (cantar la nota antes de cortar)"
+    valor: null
+    tipo: opinion
+    timestamp: "16:00"
+    cita: "Maybe start by singing that resonance."
+  - elemento: mezcla
+    parametro: "decision por oido vs analizador"
+    valor: null
+    tipo: opinion
+    timestamp: "16:30"
+    cita: "No one is listening to music with analyzers in front of them."
+  - elemento: mezcla
+    parametro: "imperfeccion (compresor con pump, ruido) como caracter"
+    valor: null
+    tipo: opinion
+    timestamp: "17:30"
+    cita: "you hear the pump of the compressor it's printing vibe to the music"
+gaps_visuales:
+  - timestamp: "05:00"
+    que_falta: "valor en dB de los faders que se mueven (no visible de forma legible)"
+  - timestamp: "16:00"
+    que_falta: "frecuencias y cortes del EQ de resonancia mostrados en el espectrometro"
+resumen_utilidad:
+  items_dicho: 2
+  items_en_pantalla: 0
+  items_opinion: 11
+  nota: "Casi todo es criterio de mezcla; sirve como marco (balance de nivel primero, backbone, bypass a ciegas) pero aporta pocos valores para reglas duras."
