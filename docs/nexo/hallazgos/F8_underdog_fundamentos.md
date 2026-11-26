@@ -348,6 +348,8 @@ Estados: **CONFIRMA** (coincide) · **NUEVO** (el perfil no lo tiene) · **CONTR
 
 ## 5. Candidatos a A/B a oído
 
+> **D-18 (Gabriel, 2026-11-25):** no se resuelven en abstracto. Son alternativas que conviven; cada una se prueba al construir un tema concreto y lo elegido vale para ese tema. Rumble loop vs desde el kick ya figura en el perfil como `elementos.rumble.alternativas_origen`.
+
 Propuestas ordenadas por valor/costo; **Gabriel decide por oído** (D-01). Una sola variable por prueba; todo lo demás igual (mismo kick, mismo nivel, misma reducción de ganancia).
 
 | # | Variable | A | B | Qué escuchar |

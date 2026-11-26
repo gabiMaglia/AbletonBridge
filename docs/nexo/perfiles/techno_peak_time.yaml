@@ -71,6 +71,10 @@ elementos:
     criterio_gabriel: true
     fuente: [T01, F4 criterios de Gabriel]
     confianza: alta
+    # D-18: dos maneras de hacer lo mismo; se elige POR TEMA al construirlo, nunca de antemano.
+    alternativas_origen:
+      - {id: loop,       descripcion: "loop de rumble de librería (lo de arriba: tipo loop, warp complex)"}
+      - {id: desde_kick, descripcion: "pista de audio con input = Kick (Post FX, Monitor In): Reverb -> Utility Mono -> Auto Filter LP 24 dB ~163-183 Hz -> Compressor con sidechain del kick (S/C EQ low-pass 80 Hz). Afinado con el kick por construcción.", receta: "docs/nexo/underdog/bases/rumble-basico.yaml", fuente: [YT-UD-oUbACkekJZ8, F8]}
   bass:
     tipo: loop
     pista: BASS
