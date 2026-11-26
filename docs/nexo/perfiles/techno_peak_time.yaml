@@ -366,6 +366,23 @@ reglas:
     confianza: alta
     # Pendiente: implementar en composer (T-030). Convive con puente.filtro_master (HP del master);
     # no probado junto con el.
+  hats_contorno_capa:
+    descripcion: >
+      Dos lineas de hat cerrado en semicorcheas EN CAPA con el mismo sample: una plana (shaker continuo)
+      y otra con contorno de velocity por tiempo baja-media-alta-media (Oscar Underdog "bounce"), que
+      marca la corchea del contratiempo. A/B a oido 2026-11-25 (T-028): Gabriel no eligio una; las oyo
+      como dos partes distintas que conviven, y para la capa le bajo el ataque al contorno (Fade In) y
+      su nivel -6 dB: "le robo attack al sonido y favorecio la mezcla".
+    rol: hats
+    paso_beats: 0.25
+    capas:
+      - {nombre: plano,    velocity: 86}
+      - {nombre: contorno, velocity_por_tiempo: [60, 85, 115, 85], simpler_fade_in_ms: 9.26, nivel_rel_db: -6}
+    simpler_vol_vel: 1.0         # Vol < Vel al 100 %: con el default (35 %) el contorno casi no se oye
+    criterio_gabriel: true
+    fuente: [YT-OU-7lgyDq8N1J0, "A/B T-028"]
+    confianza: alta
+    # Pendiente: implementar en composer (ticket a crear). Probado con hat "nuar" de Zenhiser.
   llamado_respuesta:
     descripcion: >
       La voz llama y otro rol responde: alternan de a 2 compases dentro de la frase. Gabriel RECHAZO
